@@ -40,18 +40,19 @@ int log_printf(
     char *p;
     int nPos = 0;
 
-    if ( (nLevel > s_nLogLevel) ) 
-    {
+    if( nLevel > s_nLogLevel ) {
 	    nPrint = 0;
     }
 
-    if ( nPrint )
+    if( nPrint )
     {
         p = s_Buf;
         memset( p, 0, BufSize );
 
         va_start( ap, format );
-            nPos  = sprintf( p, "%s", s_szPrefix[nLevel] );
+            if( s_nLogLevel > LogInfo || nLevel < LogInfo) {
+                nPos  = sprintf( p, "%s", s_szPrefix[nLevel] );
+            }
             nPos += vsprintf( &p[nPos], format, ap );
             fputs( p, stderr );
             fputs( "\n", stderr );

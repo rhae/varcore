@@ -179,7 +179,7 @@ int main( int argc, char **argv )
 
   defs_init();
   loc_init();
-  log_init( LogDebug );
+  log_init( LogInfo );
 
   sprintf( def, "#define VARPP_MAJOR       %d", s_Version.Major );
   defs_add( def, 0 );
