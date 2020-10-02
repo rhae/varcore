@@ -10,6 +10,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "defs.h"
 #include "loc.h"
@@ -157,10 +158,25 @@ typedef struct {
   S32 Major;
   S32 Minor;
   S32 Patch;
+  S8  *Name;
+  S8  *Copyright;
+  S8  *Date;
 } VERSION;
 
-static VERSION s_Version = { 1, 1, 0 };
+static VERSION s_Version = {
+  1, 1, 0,
+  "Variable preprocessor",
+  "(C) R. Haertel",
+  "2020"
+};
 
+static void puts_version() {
+  fprintf( stdout, "%s %d.%d.%d, %s %s\n",
+   s_Version.Name,
+   s_Version.Major, s_Version.Minor, s_Version.Patch,
+   s_Version.Copyright,
+   s_Version.Date );
+}
 
 /**
  *
@@ -170,9 +186,9 @@ static VERSION s_Version = { 1, 1, 0 };
 int main( int argc, char **argv )
 {
   UNUSED_PARAM( argc );
-  char fname[BufSize];
-  char path[BufSize];
-  char oname[BufSize];
+  char *fname = (char*) calloc( PATH_MAX, 1 );
+  char *path = (char*) calloc( PATH_MAX, 1 );
+  char *oname = (char*) calloc( PATH_MAX, 1 );
   char def[BufSize];
 
   memset( &s_Stats, 0, sizeof(STATS));
@@ -180,6 +196,8 @@ int main( int argc, char **argv )
   defs_init();
   loc_init();
   log_init( LogInfo );
+
+  puts_version();
 
   sprintf( def, "#define VARPP_MAJOR       %d", s_Version.Major );
   defs_add( def, 0 );
@@ -195,10 +213,10 @@ int main( int argc, char **argv )
   defs_add("#define VEC_DEFAULT 1", 0 );
 
 
-  strcpy( fname, argv[1] );
+  realpath( argv[1], fname );
 
-  log_printf( LogDebug, "Input File: %s", fname );
-  log_printf( LogDebug, "path: %s", get_path( path, fname ));
+  log_printf( LogInfo, "Input File:  %s", fname );
+  log_printf( LogInfo, "Output path: %s", get_path( path, fname ));
 
   read_csv_file( &s_Data, fname );
 
