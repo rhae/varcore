@@ -1,6 +1,8 @@
 
 # Motivation
-Provide a software component that manages variables.
+Provide a software component for an ressource constrained system
+(embedded) that manages variables.
+Variables are defined at compile time.
 Variables are defined in an CSV table.
 A preprocessor creates the required structures.
 
