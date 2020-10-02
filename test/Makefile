@@ -20,11 +20,10 @@ cunit:
 	cd cunit && mkdir local-build && cd local-build && cmake .. && cmake --build . 
 
 vardef.inc: res.csv
-	../tools/varpp $<
+	../tools/varpp/varpp $<
 
 tests: vardef.inc $(objects)
-	$(MAKE) -C ../lib libvarcore.a
-	$(CC) $(CFLAGS) $(sources) $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(objects) $(LIBS) -o $@
 
 clean:
 	# $(RM) -rf cunit
