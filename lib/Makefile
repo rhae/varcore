@@ -1,5 +1,5 @@
 
-target ::= vc.lib
+target ::= libvarcore.a
 
 sources := varcore.c
 objects := $(sources:.c=.o)
@@ -14,9 +14,6 @@ all: $(target)
 libvarcore.a: $(objects)
 	$(AR) cr $@ $<
 
-.PHONY: vc.test
-vc.test:
-	$(CC) $(CFLAGS) -DTEST $(sources) -o $@
-
 clean:
 	$(RM) $(objects) $(target)
+
