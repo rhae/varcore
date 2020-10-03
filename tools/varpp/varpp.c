@@ -65,14 +65,14 @@ typedef struct _PP_DATA_STRING {
   int flags;
 } PP_DATA_STRING;
 
-typedef struct _STRINGS {
+typedef struct _StringItem {
   STRBUF str;                /* key for hash */
-  int cnt;
+  int len;
   int constant;
   UT_hash_handle hh;         /* makes this structure hashable */
-} STRINGS;
+} StringItem;
 
-typedef struct _DATA_ITEM {
+typedef struct _DataItem {
   STRBUF hnd;
   STRBUF scpi;
   int acc_rights;
@@ -89,8 +89,8 @@ typedef struct _DATA_ITEM {
     PP_DATA_STRING data_string;
   } data;
 
-  struct _DATA_ITEM *next;
-} DATA_ITEM;
+  struct _DataItem *next;
+} DataItem;
 
 typedef struct {
   char     szKey[BufSize];
@@ -112,21 +112,21 @@ enum {
 };
 typedef char CSV_BUF[MaxCsvColumns][LineSize];
 
-static int parse_int( DATA_ITEM *, size_t, CSV_BUF* );
-static int parse_double( DATA_ITEM *, size_t, CSV_BUF* );
-static int parse_string( DATA_ITEM *, size_t, CSV_BUF* );
-static int parse_enum( DATA_ITEM *, size_t, CSV_BUF* );
+static int parse_int( DataItem *, size_t, CSV_BUF* );
+static int parse_double( DataItem *, size_t, CSV_BUF* );
+static int parse_string( DataItem *, size_t, CSV_BUF* );
+static int parse_enum( DataItem *, size_t, CSV_BUF* );
 
-int  read_csv_file( DATA_ITEM **, char * );
-int  save_inc_file( DATA_ITEM *, char * );
-int  save_var_file( DATA_ITEM *, char * );
-int  save_data_int( FILE *fp, DATA_ITEM *head, char const *name, int type );
-int  save_data_float( FILE *fp, DATA_ITEM *head, char const *name, int type );
-int  save_data_string( FILE *fp, DATA_ITEM *head, char const *name, int type );
-int  save_data_enum( FILE *fp, DATA_ITEM *head, char const *name, int type );
-int  save_vc_def( FILE *fp, DATA_ITEM *head );
+int  read_csv_file( DataItem **, char * );
+int  save_inc_file( DataItem *, char * );
+int  save_var_file( DataItem *, char * );
+int  save_data_int( FILE *fp, DataItem *head, char const *name, int type );
+int  save_data_float( FILE *fp, DataItem *head, char const *name, int type );
+int  save_data_string( FILE *fp, DataItem *head, char const *name, int type );
+int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type );
+int  save_vc_def( FILE *fp, DataItem *head );
 
-int  save_descr_int( FILE *fp, DATA_ITEM *head, char const *name, int type );
+int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type );
 
 char *get_path( char *path, char const *fname );
 char *join_path( char *oname, char const *path, char const *fname );
@@ -136,14 +136,14 @@ static int AddDefaultValue( char *, int , int *);
 static void PrintDefaultValues( FILE *, DefaultValue_t *, char *);
 #endif
 
-typedef struct _STATS {
+typedef struct _Stats {
   size_t max_var_hnd_len;
   size_t max_string_hnd_len;
-} STATS;
+} Stats;
 
-DATA_ITEM *s_Data = NULL;
-STRINGS   *s_Strings = NULL;
-STATS      s_Stats;
+DataItem     *s_Data = NULL;
+StringItem   *s_Strings = NULL;
+Stats         s_Stats;
 
 #if 0
 static DefaultValue_t *s_pInt16DefVal = NULL;
@@ -191,7 +191,7 @@ int main( int argc, char **argv )
   char *oname = (char*) calloc( PATH_MAX, 1 );
   char def[BufSize];
 
-  memset( &s_Stats, 0, sizeof(STATS));
+  memset( &s_Stats, 0, sizeof(Stats));
 
   defs_init();
   loc_init();
@@ -278,7 +278,7 @@ char *join_path( char *oname, char const *path, char const *fname )
  *
  *
  */
-int read_csv_file( DATA_ITEM **head, char * szFilename)
+int read_csv_file( DataItem **head, char * szFilename)
 {
   
   enum {
@@ -298,7 +298,6 @@ int read_csv_file( DATA_ITEM **head, char * szFilename)
 
   char line[LineSize];
   CSV_BUF cols;
-  // uint16_t uFlags;
 
   nRet = 1;
   fp = fopen( szFilename, "r" );
@@ -342,7 +341,7 @@ int read_csv_file( DATA_ITEM **head, char * szFilename)
       s_Stats.max_var_hnd_len = len;
     }
 
-    DATA_ITEM *item = (DATA_ITEM *) calloc( sizeof(DATA_ITEM), 1 );
+    DataItem *item = (DataItem *) calloc( sizeof(DataItem), 1 );
 
     strcpy( item->hnd, cols[ColHnd] );
     strcpy( item->scpi, cols[ColScpi] );
@@ -411,11 +410,11 @@ int read_csv_file( DATA_ITEM **head, char * szFilename)
  *
  *
  */
-int save_inc_file( DATA_ITEM *head, char *szFilename )
+int save_inc_file( DataItem *head, char *szFilename )
 {
   UNUSED_PARAM( head );
   int nRet;
-  DATA_ITEM *item;
+  DataItem *item;
   char *spaces;
   DEF_ITER iter;
 
@@ -469,11 +468,11 @@ int save_inc_file( DATA_ITEM *head, char *szFilename )
  *
  *
  */
-int save_var_file( DATA_ITEM *head, char *szFilename )
+int save_var_file( DataItem *head, char *szFilename )
 {
   UNUSED_PARAM( head );
   int nRet;
-  DATA_ITEM *item;
+  DataItem *item;
   int data_cnt[MSK_TYPE+1] = {};
   int descr_cnt[MSK_TYPE+1] = {};
 
@@ -545,12 +544,12 @@ int save_var_file( DATA_ITEM *head, char *szFilename )
   return nRet;
 }
 
-int  save_descr_int( FILE *fp, DATA_ITEM *head, char const *name, int type ) {
+int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
   int i = 1;
   char const *ztype;
   char const *zfmt;
   int size;
-  DATA_ITEM *item;
+  DataItem *item;
 
   switch( type ) {
     
@@ -598,12 +597,12 @@ int  save_descr_int( FILE *fp, DATA_ITEM *head, char const *name, int type ) {
   return 0;
 }
 
-int  save_data_int( FILE *fp, DATA_ITEM *head, char const *name, int type ) {
+int  save_data_int( FILE *fp, DataItem *head, char const *name, int type ) {
   int i = 1;
   char const *ztype;
   char const *zfmt;
   int size;
-  DATA_ITEM *item;
+  DataItem *item;
 
   switch( type ) {
     case TYPE_INT16:
@@ -658,12 +657,12 @@ int  save_data_int( FILE *fp, DATA_ITEM *head, char const *name, int type ) {
   return 0;
 }
 
-int  save_data_float( FILE *fp, DATA_ITEM *head, char const *name, int type ) {
+int  save_data_float( FILE *fp, DataItem *head, char const *name, int type ) {
   int i = 1;
   char const *ztype;
   char const *zfmt;
   int size;
-  DATA_ITEM *item;
+  DataItem *item;
 
   switch( type ) {
     case TYPE_FLOAT:
@@ -718,11 +717,11 @@ int  save_data_float( FILE *fp, DATA_ITEM *head, char const *name, int type ) {
   return 0;
 }
 
-int  save_data_string( FILE *fp, DATA_ITEM *head, char const *name, int type )
+int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
 {
   int i = 1;
   char const *ztype;
-  DATA_ITEM *item;
+  DataItem *item;
 
   switch( type ) {
     case TYPE_STRING:
@@ -768,11 +767,11 @@ int  save_data_string( FILE *fp, DATA_ITEM *head, char const *name, int type )
   return 0;  
 }
 
-int  save_data_enum( FILE *fp, DATA_ITEM *head, char const *name, int type )
+int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
 {
   int i = 1;
   char const *ztype;
-  DATA_ITEM *item;
+  DataItem *item;
 
   switch( type ) {
     case TYPE_ENUM:
@@ -823,12 +822,12 @@ int  save_data_enum( FILE *fp, DATA_ITEM *head, char const *name, int type )
   return 0;
 }
 
-int save_vc_def( FILE *fp, DATA_ITEM *head )
+int save_vc_def( FILE *fp, DataItem *head )
 {
   size_t cnt_total = 0;
   size_t cnt_descr[TYPE_LAST] = {};
   size_t cnt_data[TYPE_LAST] = {};
-  DATA_ITEM *item;
+  DataItem *item;
 
   LL_FOREACH( head, item ) {
     cnt_total++;
@@ -998,7 +997,7 @@ int  GetStorage( char * pStorage, int *pValue)
 
 
 static int string_add( char const *s, int n ) {
-  STRINGS *str = (STRINGS*)calloc( sizeof(STRINGS), 1 );
+  StringItem *str = (StringItem*)calloc( sizeof(StringItem), 1 );
 
   if( !str ) {
     return 0;
@@ -1010,7 +1009,7 @@ static int string_add( char const *s, int n ) {
   }
 
   strcpy( str->str, s );
-  str->cnt = n;
+  str->len = n;
   str->constant = 0;
   HASH_ADD_STR( s_Strings, str, str );
 
@@ -1019,7 +1018,7 @@ static int string_add( char const *s, int n ) {
 
 #define CSV_COL( _buf, _col ) ((char*)(*_buf)[_col])
 
-static int parse_string( DATA_ITEM *item, size_t col_cnt, CSV_BUF *cols )
+static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
     colModifier = 7,
@@ -1047,7 +1046,7 @@ static int parse_string( DATA_ITEM *item, size_t col_cnt, CSV_BUF *cols )
   return 0;
 }
 
-static int parse_int( DATA_ITEM *item, size_t col_cnt, CSV_BUF *cols )
+static int parse_int( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
     colDefault = 7,
@@ -1068,7 +1067,7 @@ static int parse_int( DATA_ITEM *item, size_t col_cnt, CSV_BUF *cols )
   return 0;
 }
 
-static int parse_double( DATA_ITEM *item, size_t col_cnt, CSV_BUF *cols )
+static int parse_double( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
     colDefault = 7,
@@ -1097,7 +1096,7 @@ static int parse_double( DATA_ITEM *item, size_t col_cnt, CSV_BUF *cols )
  *  @param col_cnt
  *  @param cols 
  */
-static int parse_enum( DATA_ITEM *item, size_t col_cnt, CSV_BUF *cols )
+static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   UNUSED_PARAM( col_cnt );
 
