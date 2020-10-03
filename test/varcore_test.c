@@ -82,78 +82,78 @@ static int suite_clean(void) {
 static void rd32(void)
 {
   S32 ser = 0xaa55;
-	ERR_CODE ret = vc_as_int32( VAR_SER, VarRead, &ser, 0, REQ_PRG );
+	ErrCode ret = vc_as_int32( VAR_SER, VarRead, &ser, 0, REQ_PRG );
 
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_EQUAL( ser, 10000 );
 }
 
 static void wr32(void)
 {
   S32 ser = 0xaa55;
-	ERR_CODE ret;
+	ErrCode ret;
   
   ret = vc_as_int32( VAR_SER, VarWrite, &ser, 0, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_ACCESS_DENIED );
+  CU_ASSERT_EQUAL( ret, kErrAccessDenied );
 
   ret = vc_as_int32( VAR_SER, VarWrite, &ser, 0, REQ_PRG | REQ_ADMIN );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
 
   ser = 1000;
   ret = vc_as_int32( VAR_SER, VarRead, &ser, 0, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_EQUAL( ser, 0xaa55 );
 }
 
 static void rd32_chan(void) {
   S32 power[VEC_LEM] = { 0, 0, 0, 0 };
-  ERR_CODE ret;
+  ErrCode ret;
 
   for( int i = 0; i < VEC_LEM; i++ ) {
     power[i] = -99;
   }
 
   ret = vc_as_int32( VAR_POW, VarRead, &power[0], 0, REQ_PRG );
-  CU_ASSERT_EQUAL32( ret, ERR_NONE );
+  CU_ASSERT_EQUAL32( ret, kErrNone );
   CU_ASSERT_EQUAL32( power[0], 0 );
 
   power[0] = -99;
   ret = vc_as_int32( VAR_POW, VarRead, &power[0], VEC_LEM, REQ_PRG );
-  CU_ASSERT_EQUAL32( ret, ERR_INVALID_CHAN );
+  CU_ASSERT_EQUAL32( ret, kErrInvalidChan );
   CU_ASSERT_EQUAL32( power[0], -99 );
 
   power[1] = -99;
   ret = vc_as_int32( VAR_POW, VarRead, &power[1], 1, REQ_PRG );
-  CU_ASSERT_EQUAL32( ret, ERR_NONE );
+  CU_ASSERT_EQUAL32( ret, kErrNone );
   CU_ASSERT_EQUAL32( power[1], 0 );
 }
 
 static void wr32_chan(void)
 {
   S32 power[VEC_LEM] = { 0, 0, 0, 0 };
-  ERR_CODE ret;
+  ErrCode ret;
 
   for( int i = 0; i < VEC_LEM; i++ ) {
     power[i] = -99;
   }
 
   ret = vc_as_int32( VAR_POW, VarWrite, &power[0], 0, REQ_PRG );
-  CU_ASSERT_EQUAL32( ret, ERR_NONE );
+  CU_ASSERT_EQUAL32( ret, kErrNone );
   power[0] = 99;
   ret = vc_as_int32( VAR_POW, VarRead, &power[0], 0, REQ_PRG );
-  CU_ASSERT_EQUAL32( ret, ERR_NONE );
+  CU_ASSERT_EQUAL32( ret, kErrNone );
   CU_ASSERT_EQUAL32( power[0], -99 );
 
 
   ret = vc_as_int32( VAR_POW, VarWrite, &power[VEC_LEM-1], VEC_LEM-1, REQ_PRG );
-  CU_ASSERT_EQUAL32( ret, ERR_NONE );
+  CU_ASSERT_EQUAL32( ret, kErrNone );
   power[VEC_LEM-1] = 99;
   ret = vc_as_int32( VAR_POW, VarRead, &power[VEC_LEM-1], VEC_LEM-1, REQ_PRG );
-  CU_ASSERT_EQUAL32( ret, ERR_NONE );
+  CU_ASSERT_EQUAL32( ret, kErrNone );
   CU_ASSERT_EQUAL32( power[VEC_LEM-1], -99 );
 
   ret = vc_as_int32( VAR_POW, VarWrite, &power[0], VEC_LEM, REQ_PRG );
-  CU_ASSERT_EQUAL32( ret, ERR_INVALID_CHAN );
+  CU_ASSERT_EQUAL32( ret, kErrInvalidChan );
 }
 
 
@@ -169,83 +169,83 @@ static CU_TestInfo tests_rdwr32[] = {
 static void rd16(void)
 {
   S16 node_id = 127;
-	ERR_CODE ret;
+	ErrCode ret;
   
   ret = vc_as_int16( VAR_CO_NODEID, VarRead, &node_id, 0, REQ_PRG );
 
-  CU_ASSERT_EQUAL16( ret, ERR_NONE );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
   CU_ASSERT_EQUAL16( node_id, 1 );
 }
 
 static void wr16(void)
 {
   S16 node_id = 127;
-	ERR_CODE ret;
+	ErrCode ret;
   
   ret = vc_as_int16( VAR_CO_NODEID, VarWrite, &node_id, 0, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_NONE );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
 
   node_id = 25;
   ret = vc_as_int16( VAR_CO_NODEID, VarRead, &node_id, 0, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_NONE );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
   CU_ASSERT_EQUAL16( node_id, 127 );
 }
 
 static void rd16_chan(void)
 {
   S16 temp[VEC_LEM] = { 0, 0, 0, 0 };
-  ERR_CODE ret;
+  ErrCode ret;
 
   for( int i = 0; i < VEC_LEM; i++ ) {
     temp[i] = -99;
   }
 
   ret = vc_as_int16( VAR_TP1, VarRead, &temp[0], 0, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_NONE );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
   CU_ASSERT_EQUAL16( temp[0], 0 );
 
   temp[0] = -99;
   ret = vc_as_int16( VAR_TP1, VarRead, &temp[0], VEC_LEM, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_INVALID_CHAN );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidChan );
   CU_ASSERT_EQUAL16( temp[0], -99 );
 
   temp[1] = -99;
   ret = vc_as_int16( VAR_TP1, VarRead, &temp[1], 1, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_NONE );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
   CU_ASSERT_EQUAL16( temp[1], 0 );
 }
 
 static void wr16_chan(void)
 {
   S16 temp[VEC_LEM] = { 0, 0, 0, 0 };
-  ERR_CODE ret;
+  ErrCode ret;
 
   for( int i = 0; i < VEC_LEM; i++ ) {
     temp[i] = -99;
   }
 
   ret = vc_as_int16( VAR_TP1, VarWrite, &temp[0], 0, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_NONE );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
   temp[0] = 99;
   ret = vc_as_int16( VAR_TP1, VarRead, &temp[0], 0, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_NONE );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
   CU_ASSERT_EQUAL16( temp[0], -99 );
 
 
   ret = vc_as_int16( VAR_TP1, VarWrite, &temp[VEC_LEM-1], VEC_LEM-1, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_NONE );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
   temp[VEC_LEM-1] = 99;
   ret = vc_as_int16( VAR_TP1, VarRead, &temp[VEC_LEM-1], VEC_LEM-1, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_NONE );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
   CU_ASSERT_EQUAL16( temp[VEC_LEM-1], -99 );
 
   ret = vc_as_int16( VAR_TP1, VarWrite, &temp[0], VEC_LEM, REQ_PRG );
-  CU_ASSERT_EQUAL16( ret, ERR_INVALID_CHAN );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidChan );
 }
 
 static void as_str16(void)
 {
-  ERR_CODE ret;
+  ErrCode ret;
   STRBUF S;
 
   S16 node_id = 16;
@@ -253,43 +253,43 @@ static void as_str16(void)
 
   // read S16, read str
   ret = vc_as_int16( VAR_CO_NODEID, VarWrite, &node_id, 0, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
 
   ret = vc_as_string( VAR_CO_NODEID, VarRead, S, 0, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_STRING_EQUAL( S, "16");
 
   // write str, read S16
   sprintf( S, "18");
   ret = vc_as_string( VAR_CO_NODEID, VarWrite, S, 0, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
 
   ret = vc_as_int16( VAR_CO_NODEID, VarRead, &node_id, 0, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_EQUAL( node_id, 18 );
 
   // write S16 vector, read str
   tmp = 36;
   ret = vc_as_int16( VAR_TP1, VarWrite, &tmp, 3, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
 
   ret = vc_as_string( VAR_TP1, VarRead, S, 3, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_STRING_EQUAL( S, "36");
 
   // write str vector, read S16
   sprintf( S, "18");
   ret = vc_as_string( VAR_TP1, VarWrite, S, 4, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
   
   ret = vc_as_int16( VAR_TP1, VarRead, &tmp, 4, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_STRING_EQUAL( S, "18");
 
   // write str vector (float to int16)
   sprintf( S, "18.23");
   ret = vc_as_string( VAR_TP1, VarWrite, S, 4, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_INVALID_VALUE );
+  CU_ASSERT_EQUAL( ret, kErrInvalidValue );
 }
 
 static CU_TestInfo tests_rdwr16[] = {
@@ -303,14 +303,14 @@ static CU_TestInfo tests_rdwr16[] = {
 
 static void rd_str(void) {
   STRBUF S;
-  ERR_CODE ret;
+  ErrCode ret;
   
   ret = vc_as_string( VAR_IDN, VarRead, S, 0, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_STRING_EQUAL( S, "Test application V1.01 (R) foo" );
 
   ret = vc_as_string( VAR_OFF, VarRead, S, 0, REQ_PRG );
-  CU_ASSERT_EQUAL( ret, ERR_NONE );
+  CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_STRING_EQUAL( S, "OFF" );
 }
 
@@ -438,22 +438,4 @@ void S16_AddTests(void)
   pSuite = CU_add_suite("TestFatal", NULL, NULL);
   CU_add_test(pSuite, "testFatal", testFatal);
 */
-}
-
-void print_example_results(void)
-{
-  fprintf(stdout, "\n\nExpected Test Results:"
-                  "\n\n  Error Handling  Type      # Run   # Pass   # Fail"
-                  "\n\n  ignore errors   suites%9u%9u%9u"
-                    "\n                  tests %9u%9u%9u"
-                    "\n                  asserts%8u%9u%9u"
-                  "\n\n  stop on error   suites%9u%9u%9u"
-                    "\n                  tests %9u%9u%9u"
-                    "\n                  asserts%8u%9u%9u\n\n",
-                  14, 14, 3,
-                  31, 10, 21,
-                  89, 47, 42,
-                  4, 4, 1,
-                  12, 9, 3,
-                  12, 9, 3);
 }

@@ -3,17 +3,19 @@
 
 
 typedef enum {
-	ERR_NONE      = 0,
-	ERR_GENERIC   = -1,
+	kErrNone      = 0,
+	kErrGeneric   = -1,
 
-	ERR_BASE               = 0x2000,
-	ERR_UPPER_LIMIT        = (ERR_BASE + 1),
-	ERR_LOWER_LIMIT        = (ERR_BASE + 2),
+	kErrBase               = 0x2000,
+	kErrUpperLimit        = (kErrBase + 1),
+	kErrLowerLimit        = (kErrBase + 2),
 
-	ERR_NOT_VECTOR         = (ERR_BASE + 3),
-	ERR_INVALID_CHAN       = (ERR_BASE + 4),
+	kErrNoVector          = (kErrBase + 3),
+	kErrInvalidChan       = (kErrBase + 4),
 
-	ERR_ACCESS_DENIED      = (ERR_BASE + 5),
-	ERR_INVALID_VALUE      = (ERR_BASE + 6),
-	ERR_INVALID_TYPE       = (ERR_BASE + 7),
-} ERR_CODE;
+	kErrAccessDenied      = (kErrBase + 5),
+	kErrInvalidValue      = (kErrBase + 6),
+	kErrInvalidType       = (kErrBase + 7),
+
+	
+} ErrCode;

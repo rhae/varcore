@@ -40,20 +40,20 @@ static inline int is_vector( VAR_DESC const *var )
 	return nRet;
 }
 
-static inline ERR_CODE acc_allowed( VAR_DESC const *var, int rdwr, U16 req ) {
+static inline ErrCode acc_allowed( VAR_DESC const *var, int rdwr, U16 req ) {
 
 	int needs_admin = var->acc_rights & REQ_ADMIN;
 	int has_admin = req & REQ_ADMIN;
 	if( rdwr == VarWrite && needs_admin != has_admin) {
-		return ERR_ACCESS_DENIED;
+		return kErrAccessDenied;
 	}
 
 	U16 acc = var->acc_rights & MSK_ACC;
 	U16 match = acc & req;
 	if( match != (req & MSK_ACC)) {
-		return ERR_ACCESS_DENIED;
+		return kErrAccessDenied;
 	}
-	return ERR_NONE;
+	return kErrNone;
 }
 
 /************************************************************************************/
@@ -83,8 +83,8 @@ int vc_get_access( HND hnd, int chan ) {
  *
  *
  */
-ERR_CODE vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
-	ERR_CODE ret = ERR_NONE;
+ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
+	ErrCode ret = kErrNone;
 	VAR_DESC const *var;
 	DATA_S16 *data;
 
@@ -94,17 +94,17 @@ ERR_CODE vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	data = &s_vc_data->data_s16[var->data_idx + chan];
 
 	if((var->type & MSK_TYPE) != TYPE_INT16 ) {
-		return ERR_INVALID_TYPE;
+		return kErrInvalidType;
 	}
 
 	ret = acc_allowed( var, rdwr, req );
-	if( ret != ERR_NONE ) {
+	if( ret != kErrNone ) {
 		return ret;
 	}
 
   if( chan > 0) {
 		ret = vc_chk_vector( var, chan );
-		if( ret != ERR_NONE ) {
+		if( ret != kErrNone ) {
 			return ret;
 		}
 	}
@@ -124,8 +124,8 @@ ERR_CODE vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
  *
  *
  */
-ERR_CODE vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
-	ERR_CODE ret = ERR_NONE;
+ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
+	ErrCode ret = kErrNone;
 	VAR_DESC const *var;
 	DATA_S32 *data;
 
@@ -135,17 +135,17 @@ ERR_CODE vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 	data = &s_vc_data->data_s32[var->data_idx + chan];
 
 	if((var->type & MSK_TYPE) != TYPE_INT32 ) {
-		return ERR_INVALID_TYPE;
+		return kErrInvalidType;
 	}
 
 	ret = acc_allowed( var, rdwr, req );
-	if( ret != ERR_NONE ) {
+	if( ret != kErrNone ) {
 		return ret;
 	}
 
   if( chan > 0) {
 		ret = vc_chk_vector( var, chan );
-		if( ret != ERR_NONE ) {
+		if( ret != kErrNone ) {
 			return ret;
 		}
 	}
@@ -166,8 +166,8 @@ ERR_CODE vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
  *
  *
  */
-ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
-	ERR_CODE ret = ERR_NONE;
+ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
+	ErrCode ret = kErrNone;
 	VAR_DESC const *var;
 	U16 type;
 	
@@ -186,7 +186,7 @@ ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				errno = 0;
 				n = strtol( (char*)val, &endp, 0 );
 				if( errno != 0 || (char*)val == endp || *endp != '\0' || n > 32767 || n < -32768) {
-					return ERR_INVALID_VALUE;
+					return kErrInvalidValue;
 				}
 				n16 = (S16) n;
 				ret = vc_as_int16( hnd, rdwr, &n16, chan, req );
@@ -195,7 +195,7 @@ ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				S16 n16;
 				char *p = val;
 				ret = vc_as_int16( hnd, rdwr, &n16, chan, req );
-				if( ret == ERR_NONE ) {
+				if( ret == kErrNone ) {
 					sprintf( p, "%hd", n16 );
 				}
 			}
@@ -209,7 +209,7 @@ ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				errno = 0;
 				n = strtol( (char*)val, &endp, 0 );
 				if( errno != 0 || (char*)val == endp || *endp != '\0' ) {
-					return ERR_INVALID_VALUE;
+					return kErrInvalidValue;
 				}
 				ret = vc_as_int32( hnd, rdwr, &n, chan, req );
 			}
@@ -217,7 +217,7 @@ ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				S32 n;
 				char *p = val;
 				ret = vc_as_int32( hnd, rdwr, &n, chan, req );
-				if( ret == ERR_NONE ) {
+				if( ret == kErrNone ) {
 					sprintf( p, "%d", n );
 				}
 			}
@@ -231,7 +231,7 @@ ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				errno = 0;
 				f = strtof( (char*)val, &endp );
 				if( errno != 0 || (char*)val == endp || *endp != '\0' ) {
-					return ERR_INVALID_VALUE;
+					return kErrInvalidValue;
 				}
 				ret = vc_as_float( hnd, rdwr, &f, chan, req );
 			}
@@ -239,7 +239,7 @@ ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				F32 f;
 				char *p = val;
 				ret = vc_as_float( hnd, rdwr, &f, chan, req );
-				if( ret == ERR_NONE ) {
+				if( ret == kErrNone ) {
 					sprintf( p, "%f", f );
 				}
 			}
@@ -250,7 +250,7 @@ ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 			S32 idx = var->data_idx + chan * sizeof(STRBUF);
 			S32 max_idx = sizeof(STRBUF) * s_vc_data->data_str_cnt;
 			if( idx > max_idx ) {
-				return ERR_INVALID_CHAN;
+				return kErrInvalidChan;
 			}
 			DATA_STRING *data = &s_vc_data->data_str[idx];
 
@@ -278,8 +278,8 @@ ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
  *
  *
  */
-ERR_CODE vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
-	ERR_CODE ret = ERR_NONE;
+ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
+	ErrCode ret = kErrNone;
 	VAR_DESC const *var;
 	DATA_S32 *data;
 
@@ -289,17 +289,17 @@ ERR_CODE vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	data = &s_vc_data->data_s32[var->data_idx + chan];
 
 	if((var->type & MSK_TYPE) != TYPE_INT32 ) {
-		return ERR_INVALID_TYPE;
+		return kErrInvalidType;
 	}
 
 	ret = acc_allowed( var, rdwr, req );
-	if( ret != ERR_NONE ) {
+	if( ret != kErrNone ) {
 		return ret;
 	}
 
   if( chan > 0) {
 		ret = vc_chk_vector( var, chan );
-		if( ret != ERR_NONE ) {
+		if( ret != kErrNone ) {
 			return ret;
 		}
 	}
@@ -320,63 +320,18 @@ ERR_CODE vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
  *
  *
  */
-static ERR_CODE vc_chk_vector( VAR_DESC const *var, int8_t chan )
+static ErrCode vc_chk_vector( VAR_DESC const *var, int8_t chan )
 {
 	int ret;
 
-	ret = ERR_NOT_VECTOR;
+	ret = kErrNoVector;
 	if ( is_vector( var )) {
-		ret = ERR_NONE;
+		ret = kErrNone;
 		if(chan >= var->vec_items) {
-			ret = ERR_INVALID_CHAN;
+			ret = kErrInvalidChan;
 		}
 	}
 	return ret;
 }
 
-#ifdef TEST
 
-#include <stdio.h>
-
-#include "../vardefs.h"
-#include "../vardef.inc"
-
-int main( int argc, char **argv )
-{
-	int16_t ser = 0;
-	int ret;
-	UNUSED_PARAM( argc );
-	UNUSED_PARAM( argv );
-
-	vc_init( &g_var_data );
-
-	printf( "sizeof(VAR_DESC) = %lu\n", sizeof(VAR_DESC));
-
-	ser = 0xaa55;
-	ret = vc_as_int16( VAR_SER, VarRead, &ser, 0, REQ_PRG );
-	printf("rd SER 0x%hx, ret = %x\n", ser, ret );
-
-	ser = 0x55aa;
-	ret = vc_as_int16( VAR_SER, VarWrite, &ser, 0, REQ_PRG | REQ_ADMIN );
-	printf("wr SER 0x%hx, ret = %x\n", ser, ret );
-	ret = vc_as_int16( VAR_SER, VarRead,  &ser, 0, REQ_PRG );
-	printf("rd SER 0x%hx, ret = %x\n", ser, ret );
-
-#if 0
-	for ( i = 0; i < VEC_LEM; i++ )
-	{
-		ffCur = -1.2 * (i + 1);
-		vc_as_float( VAR_CUR, VarRead, &ffCur, i );
-		printf("%d:CUR %f\n", i, ffCur);
-
-		ffCur = 3.12f * (i + 1);
-		vc_as_float( VAR_CUR, VarWrite, &ffCur, i );
-		vc_as_float( VAR_CUR, VarRead,  &ffCur, i );
-		printf("%d:CUR %f\n", i, ffCur);
-	}
-#endif
-
-	return 0;
-}
-
-#endif

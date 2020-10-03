@@ -50,15 +50,33 @@ enum {
   REQ_EX1_R   = 0x0004,
 	REQ_EX2_R   = 0x0008,
 
+	kReqPrg_R   = 0x0001,
+	kReqCmd_R   = 0x0002,
+  kReqEx1_R   = 0x0004,
+	kReqEx2_R   = 0x0008,
+
 	REQ_PRG_W   = REQ_PRG_R << 4,
 	REQ_CMD_W   = REQ_CMD_R << 4,
 	REQ_EX1_W   = REQ_EX1_R << 4,
 	REQ_EX2_W   = REQ_EX2_R << 4,
 
+	kReqPrg_W   = 0x0001,
+	kReqCmd_W   = 0x0002,
+  kReqEx1_W   = 0x0004,
+	kReqEx2_W   = 0x0008,
+
 	REQ_PRG     = REQ_PRG_W | REQ_PRG_R,
 	REQ_CMD     = REQ_CMD_W | REQ_CMD_R,
 	REQ_EX1     = REQ_EX1_W | REQ_EX1_R,
 	REQ_EX2     = REQ_EX2_W | REQ_EX2_R,
+
+	kReq_PRG     = kReqPrg_W | kReqPrg_R,
+	kReq_CMD     = kReqCmd_W | kReqCmd_R,
+	kReq_EX1     = kReqEx1_W | kReqEx1_R,
+	kReq_EX2     = kReqEx2_W | kReqEx2_R,
+	
+	kReqAdmin    = 0x8000,
+	kReqMsk      = 0x00ff,
 	
 	REQ_ADMIN   = 0x8000,
 
@@ -71,6 +89,10 @@ enum {
 	FMT_HEX4,
 	FMT_HEX8,
 	FMT_DEC,
+
+	kFmtDefault,
+	kFmtHex4,
+	kFmtHex8
 };
 
 typedef char   S8;
@@ -182,9 +204,9 @@ typedef struct _VC_DATA {
 } VC_DATA;
 
 int vc_init( VC_DATA const* );
-ERR_CODE vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req );
-ERR_CODE vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req );
-ERR_CODE vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req );
-ERR_CODE vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req );
+ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req );
+ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req );
+ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req );
+ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req );
 
 #endif /* VARCORE_H_ */
