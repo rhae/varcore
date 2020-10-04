@@ -1,6 +1,7 @@
 
 varres.h
 vardef.inc
+.ctagsdb
 
 *.xml
 *.o
