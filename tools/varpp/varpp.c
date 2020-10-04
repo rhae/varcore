@@ -378,6 +378,7 @@ int read_csv_file( DataItem **head, char * szFilename)
     nRet = GetType( cols[ColType], &item->type );
     if ( nRet ) {
       log_printf( LogInfo, "unknown datatype: %s", cols[ColType] );
+      free( item );
       continue;
     }
 

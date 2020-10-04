@@ -192,7 +192,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				ret = vc_as_int16( hnd, rdwr, &n16, chan, req );
 			}
 			else {
-				S16 n16;
+				S16 n16 = 0;
 				char *p = val;
 				ret = vc_as_int16( hnd, rdwr, &n16, chan, req );
 				if( ret == kErrNone ) {
@@ -214,7 +214,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				ret = vc_as_int32( hnd, rdwr, &n, chan, req );
 			}
 			else {
-				S32 n;
+				S32 n = 0;
 				char *p = val;
 				ret = vc_as_int32( hnd, rdwr, &n, chan, req );
 				if( ret == kErrNone ) {
