@@ -15,6 +15,11 @@ test: lib
 tools: 
 	$(MAKE) -C tools
 
+.PHONY: check
+check:
+	$(MAKE) -C lib check
+	$(MAKE) -C tools check
+
 clean:
 	$(MAKE) -C tools clean
 	$(MAKE) -C lib clean

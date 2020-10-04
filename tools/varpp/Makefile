@@ -12,5 +12,9 @@ all: $(target)
 
 varpp: $(objects)
 
+.PHONY: check
+check:
+	cppcheck $(sources)
+
 clean:
 	$(RM) $(objects) $(target)

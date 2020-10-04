@@ -14,6 +14,10 @@ all: $(target)
 libvarcore.a: $(objects)
 	$(AR) cr $@ $<
 
+.PHONY: check
+check:
+	cppcheck $(sources)
+
 clean:
 	$(RM) $(objects) $(target)
 
