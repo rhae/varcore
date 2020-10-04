@@ -36,3 +36,11 @@ void loc_set( int line_nr ) {
 
   s_cur->line_nr = line_nr;
 }
+
+int loc_fmt( char *buf, size_t buf_size, LOC const* loc ) {
+  if( !loc ) {
+    loc = s_cur;
+  }
+
+  return snprintf( buf, buf_size, "[%s:%d]", loc->file, loc->line_nr );
+}

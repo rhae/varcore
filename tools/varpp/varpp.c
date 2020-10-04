@@ -34,6 +34,17 @@
 
 enum {BufSize = 256};
 
+typedef enum {
+  kSecVariables,
+  kSecStrings
+} Section;
+
+typedef struct {
+  Section section;
+  char const *prefix;
+  size_t prefix_len;
+} Config;
+
 typedef struct _DATA_INT {
   int def_value;
   int min;
@@ -128,6 +139,8 @@ int  save_vc_def( FILE *fp, DataItem *head );
 
 int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type );
 
+void handle_pragma( char const*, LOC const* );
+
 char *get_path( char *path, char const *fname );
 char *join_path( char *oname, char const *path, char const *fname );
 
@@ -144,6 +157,7 @@ typedef struct _Stats {
 DataItem     *s_Data = NULL;
 StringItem   *s_Strings = NULL;
 Stats         s_Stats;
+Config        s_Cfg;
 
 #if 0
 static DefaultValue_t *s_pInt16DefVal = NULL;
@@ -197,6 +211,10 @@ int main( int argc, char **argv )
   loc_init();
   log_init( LogInfo );
 
+  /* initializes s_Cfg */
+  handle_pragma( "#pragma section var", 0 );
+  handle_pragma( "#pragma prefix VAR_", 0 );
+
   puts_version();
 
   sprintf( def, "#define VARPP_MAJOR       %d", s_Version.Major );
@@ -219,11 +237,13 @@ int main( int argc, char **argv )
   log_printf( LogInfo, "Output path: %s", get_path( path, fname ));
 
   read_csv_file( &s_Data, fname );
-
-  
+ 
   save_inc_file( s_Data, join_path( oname, path, "vardefs.h"));
-
   save_var_file( s_Data, join_path( oname, path, "vardef.inc"));
+
+  free( oname );
+  free( path );
+  free( fname );
 
   return 0;
 }
@@ -327,13 +347,21 @@ int read_csv_file( DataItem **head, char * szFilename)
     uCols = MaxCsvColumns;
     split( line, ';', (char**) cols, LineSize, &uCols );
     
+    if( cols[ColHnd][0] == '#' ) {
+      char *p = skip_space( &cols[ColHnd][1] );
+      if( 0 == strncmp("pragma", p, 6)) {
+        handle_pragma( cols[ColHnd], loc_cur());
+      }
 
-    if( 0 == strncmp("#define", cols[ColHnd], 6)) {
-      defs_add( cols[ColHnd], loc_cur());
+      if( 0 == strncmp("define", p, 6)) {
+        defs_add( cols[ColHnd], loc_cur());
+      }
+
+      continue;
     }
 
     size_t len = strlen(cols[ColHnd]);
-    if((len == 0) || (strncmp( cols[ColHnd], "VAR_", 4) != 0) ) {
+    if((len == 0) || (strncmp( cols[ColHnd], s_Cfg.prefix, s_Cfg.prefix_len) != 0) ) {
       continue;
     }
 
@@ -548,7 +576,6 @@ int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
   int i = 1;
   char const *ztype;
   char const *zfmt;
-  int size;
   DataItem *item;
 
   switch( type ) {
@@ -556,13 +583,11 @@ int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
     case TYPE_INT16:
       ztype = "DATA_S16";
       zfmt = "  { %d, %d, %d }";
-      size = 3 * sizeof(short);
       break;
 
     case TYPE_INT32:
       ztype = "DATA_S32";
       zfmt = "  { %d, %d, %d }";
-      size = 3 * sizeof(long);
       break;
 
     default:
@@ -601,20 +626,17 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type ) {
   int i = 1;
   char const *ztype;
   char const *zfmt;
-  int size;
   DataItem *item;
 
   switch( type ) {
     case TYPE_INT16:
       ztype = "DATA_S16";
       zfmt = "  { %d, %d, %d }";
-      size = 3 * sizeof(short);
       break;
 
     case TYPE_INT32:
       ztype = "DATA_S32";
       zfmt = "  { %d, %d, %d }";
-      size = 3 * sizeof(long);
       break;
 
     default:
@@ -661,20 +683,17 @@ int  save_data_float( FILE *fp, DataItem *head, char const *name, int type ) {
   int i = 1;
   char const *ztype;
   char const *zfmt;
-  int size;
   DataItem *item;
 
   switch( type ) {
     case TYPE_FLOAT:
       ztype = "DATA_F32";
       zfmt = "  { %f, %f, %f }";
-      size = 3 * sizeof(float);
       break;
 
     case TYPE_DOUBLE:
       ztype = "DATA_F64";
       zfmt = "  { %g, %g, %g }";
-      size = 3 * sizeof(double);
       break;
 
     default:
@@ -1160,4 +1179,77 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   }
 
   return 0;
+}
+
+static int find_opt( char const *p, char const **opt_list, char **endp, int *idx ) {
+  
+  int found = 0;
+  int i = 0;
+
+  char *needle;
+  char *sep;
+  size_t len;
+
+  needle = strdup( p );
+  if( !needle ) {
+    return 0;
+  }
+
+  sep = strchr( needle, ' ');
+  len = sep ? (size_t) (sep - needle) : strlen(needle);
+  needle[len] = '\0';
+
+  for( char const **opt = opt_list; *opt != NULL; opt++, i++ ) {
+    
+    if( 0 == strcmp( *opt, needle )) {
+      *idx = i;
+      *endp = (char*) (p+len+1);
+      found = 1;
+      break;
+    }
+  }
+
+  free( needle );
+
+  if( !found ) {
+    *endp = (char*) p;
+  }
+
+  return found;
+}
+
+void handle_pragma( char const *line, LOC const *loc ) {
+  enum { kSection, kPrefix };
+  static char const* Pragmas[] = { "section", "prefix", NULL };
+
+  char *endp = NULL;
+  int idx = -1;
+
+  int n = find_opt( line + 8, (char const **)&Pragmas, &endp, &idx );
+  if( !n ) {
+    const int buf_size = PATH_MAX * 1.5;
+    char *buf = (char*)calloc( buf_size, sizeof(char));
+    loc_fmt( buf, buf_size, loc );
+    log_printf( LogErr, "%s Unknown pragma: %s.", buf, endp );
+    free( buf );
+    return;
+  }
+
+  switch( idx ) {
+
+    case kSection:
+      if( 0 == strcmp( endp, "var")) {
+        s_Cfg.section = kSecVariables;
+      }
+      break;
+
+    case kPrefix:
+      s_Cfg.prefix = strdup( endp );
+      s_Cfg.prefix_len = strlen( s_Cfg.prefix );
+      break;
+
+    default:
+      UNHANDLED_CASE( idx );
+      
+  }
 }

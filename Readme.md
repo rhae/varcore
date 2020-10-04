@@ -42,15 +42,29 @@ enum:
 <variable>:<value>:<ASCII>
 example: VAR_ON=1=SYM_ON
 
+## Pragmas
+* section {var|string}
+Set the current section.
+At the moment there is only one section, ie. var.
+The section string needs to be implemented.
+
+Start value is: var.
+
+* prefix
+Defines the Hnd-Prefix.
+Only lines where column 1 starts with this prefix are used.
+Start value is: VAR_
+
 # Tasks
 
 - [x] variable preprocessor
-- [ ] variable preprocessor, pragmas
+- [x] variable preprocessor, pragmas (section, prefix)
 - [ ] variable preprocessor, Windows exe
-- [x] int16, int32, float
-- [x] string
-- [ ] string, constant
+- [x] int16, int32, float variables
+- [x] string variables
+- [ ] string (constant) variables
 - [ ] binary
+- [ ] strings for later use in a programm
 - [ ] cmake
 - [ ] test suite (in progress)
 
