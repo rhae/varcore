@@ -34,6 +34,24 @@ enum {
 	TYPE_CONST   = 0x2000,
 
 	MSK_TYPE     = 0x000f,
+
+	kTypeInt8    =  0,
+	kTypeInt16   =  1,
+	kTypeInt32   =  2,
+	kTypeInt64   =  3,
+	kTypeFloat   =  4,
+	kTypeDouble  =  5,
+	kTypeEnum    =  6,
+	kTypeString  =  7,
+	kTypeAction  =  8,
+
+	kTypeLast    =  9,
+
+  kTypeVector  = 0x1000,
+	kTypeConst   = 0x2000,
+	
+	kTypeMask    = 0x000F,
+	kTypeFlag    = 0xF000,
 };
 
 enum {
@@ -178,6 +196,9 @@ typedef struct _VC_DATA {
 */
 	DATA_STRING    *data_str;
 	HND             data_str_cnt;
+
+	DATA_STRING const *data_const_str;
+	HND             data_const_str_cnt;
 
 #if 0
 	DATA_F32    *descr_f32;

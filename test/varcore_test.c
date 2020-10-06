@@ -305,13 +305,17 @@ static void rd_str(void) {
   STRBUF S;
   ErrCode ret;
   
-  ret = vc_as_string( VAR_IDN, VarRead, S, 0, REQ_PRG );
+  ret = vc_as_string( VAR_NAS, VarRead, S, 0, REQ_PRG );
   CU_ASSERT_EQUAL( ret, kErrNone );
-  CU_ASSERT_STRING_EQUAL( S, "Test application V1.01 (R) foo" );
+  CU_ASSERT_STRING_EQUAL( S, "192.168.2.10" );
 
-  ret = vc_as_string( VAR_OFF, VarRead, S, 0, REQ_PRG );
+
+  ret = vc_as_string( VAR_NAS, VarRead, S, 1, REQ_PRG );
   CU_ASSERT_EQUAL( ret, kErrNone );
-  CU_ASSERT_STRING_EQUAL( S, "OFF" );
+  CU_ASSERT_STRING_EQUAL( S, "192.168.2.10" );
+
+  ret = vc_as_string( VAR_NAS, VarRead, S, 2, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrInvalidChan );
 }
 
 static void wr_str(void) {
@@ -329,10 +333,40 @@ static CU_TestInfo tests_rdwr_str[] = {
 	CU_TEST_INFO_NULL,
 };
 
+static void rd_const_str(void) {
+  STRBUF S;
+  ErrCode ret;
+  
+  ret = vc_as_string( VAR_IDN, VarRead, S, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_STRING_EQUAL( S, "Test application V1.01 (R) foo" );
+
+  ret = vc_as_string( VAR_OFF, VarRead, S, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_STRING_EQUAL( S, "OFF" );
+}
+
+static void wr_const_str(void) {
+  STRBUF S;
+  ErrCode ret;
+
+  sprintf( S, "Hello World!");  
+  ret = vc_as_string( VAR_IDN, VarWrite, S, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrAccessDenied );
+}
+
+static CU_TestInfo tests_rd_const_str[] = {
+  { "RD CONST STRIGN", rd_const_str },
+  { "WR CONST STRING", wr_const_str },
+	CU_TEST_INFO_NULL,
+};
+
+
 static CU_SuiteInfo suites[] = {
   { "variable S32",  suite_init, suite_clean, NULL, NULL, tests_rdwr32 },
   { "variable S16",  suite_init, suite_clean, NULL, NULL, tests_rdwr16 },
   { "variable str",  suite_init, suite_clean, NULL, NULL, tests_rdwr_str },
+  { "variable const str",  suite_init, suite_clean, NULL, NULL, tests_rd_const_str },
   #if 0
   { "suite_success_init",  suite_success_init, NULL,                NULL, NULL, tests_success},
   { "suite_success_clean", NULL,               suite_success_clean, NULL, NULL, tests_success},

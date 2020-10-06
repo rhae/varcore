@@ -22,8 +22,10 @@ cunit:
 vardef.inc: res.csv
 	../tools/varpp/varpp $<
 
+.PHONY: tests
 tests: vardef.inc $(objects)
 	$(CC) $(CFLAGS) $(objects) $(LIBS) -o $@
+	./$@
 
 clean:
 	# $(RM) -rf cunit

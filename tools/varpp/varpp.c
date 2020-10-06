@@ -134,6 +134,7 @@ int  save_var_file( DataItem *, char * );
 int  save_data_int( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_float( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_string( FILE *fp, DataItem *head, char const *name, int type );
+int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type );
 int  save_vc_def( FILE *fp, DataItem *head );
 
@@ -499,11 +500,16 @@ int save_inc_file( DataItem *head, char *szFilename )
  */
 int save_var_file( DataItem *head, char *szFilename )
 {
+  enum {
+    kTypeConstString = kTypeLast,
+
+    kTypeLastPP
+  };
   UNUSED_PARAM( head );
   int nRet;
   DataItem *item;
-  int data_cnt[MSK_TYPE+1] = {};
-  int descr_cnt[MSK_TYPE+1] = {};
+  int data_cnt[kTypeLastPP+1] = {};
+  int descr_cnt[kTypeLastPP+1] = {};
 
   memset(descr_cnt, 0, sizeof(descr_cnt));
 
@@ -518,7 +524,12 @@ int save_var_file( DataItem *head, char *szFilename )
 
     int len = strlen( item->hnd );
     char *spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
-    int type = item->type & MSK_TYPE;
+    int type = item->type & kTypeMask;
+    int flags = item->type & kTypeFlag;
+
+    if( type == kTypeString && flags & kTypeConst ) {
+      type = kTypeConstString;
+    }
 
     if( i != 1 ) {
       fputs( ",\n", fp );
@@ -528,15 +539,22 @@ int save_var_file( DataItem *head, char *szFilename )
              item->hnd, spaces, item->type, item->vec_items, item->acc_rights, descr_cnt[type], data_cnt[type] );
     i++;
     switch( type ) {
-      case TYPE_INT16:
-      case TYPE_INT32:
-      case TYPE_FLOAT:
-      case TYPE_DOUBLE:
+      case kTypeInt16:
+      case kTypeInt32:
+      case kTypeFloat:
+      case kTypeDouble:
         data_cnt[type] += item->vec_items;
         break;
 
-      case TYPE_STRING:
+      case kTypeString:
         data_cnt[type] += sizeof(STRBUF) * item->vec_items;
+        break;
+
+      case kTypeConstString:
+        {
+          PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
+          data_cnt[type] +=  strlen( p->def_value ) * item->vec_items +1;
+        }
         break;
 
       case TYPE_ENUM:
@@ -561,6 +579,7 @@ int save_var_file( DataItem *head, char *szFilename )
   save_data_float( fp, head, "g_data_double", TYPE_DOUBLE );
 
   save_data_string( fp, head, "g_data_string", TYPE_STRING );
+  save_data_const_string( fp, head, "g_data_const_string", TYPE_STRING );
 
   save_data_enum( fp, head, "g_data_enum", TYPE_ENUM );
 
@@ -757,7 +776,9 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
-    if((item->type & MSK_TYPE) != type ) {
+    U16 type = item->type & kTypeMask;
+    U16 isConst = (item->type & kTypeFlag) & kTypeConst;
+    if( type != TYPE_STRING || (type == TYPE_STRING && isConst)) {
       continue;
     }
 
@@ -783,6 +804,60 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
     i++;
   }
   fputs( "\n};\n\n", fp );
+
+  return 0;  
+}
+
+int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int type ) {
+  int i = 1;
+  char const *ztype;
+  DataItem *item;
+
+  switch( type ) {
+    case TYPE_STRING:
+      ztype = "DATA_STRING const";
+      break;
+
+    default:
+      log_printf( LogErr, "STRING: Type: %d not supported", type );
+      return -1;
+  }
+
+  fprintf( fp, "%s %s[] = {\n", ztype, name );
+  LL_FOREACH( head, item ) {
+    PP_DATA_STRING *data = &item->data.data_string;
+
+    U16 type = item->type & kTypeMask;
+    U16 isConst = (item->type & kTypeFlag) & kTypeConst;
+    if( type != TYPE_STRING || (type == TYPE_STRING && !isConst)) {
+      continue;
+    }
+
+    if( i != 1 ) {
+      fputs( ", 0x00,\n", fp );
+    }
+
+    fprintf(fp, "  /* %s */\n  ", item->hnd );
+    for( int j = 0; j < item->vec_items; j++ ) {
+      int k;
+      
+      if( j > 0 ) {
+        fputs( ",\n  ", fp );
+      }
+
+      k = 0;
+      for( char *p = data->def_value; *p != '\0'; p++, k++ ) {
+        if( k > 0 ) {
+          fputs( ", ", fp );
+        }
+
+        fprintf( fp, "0x%02x", *p );
+      }
+    }
+    
+    i++;
+  }
+  fputs( ", 0x00\n};\n\n", fp );
 
   return 0;  
 }
@@ -844,15 +919,40 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
 
 int save_vc_def( FILE *fp, DataItem *head )
 {
+enum {
+    kTypeConstString = kTypeLast,
+
+    kTypeLastPP
+  };
+
   size_t cnt_total = 0;
-  size_t cnt_descr[TYPE_LAST] = {};
-  size_t cnt_data[TYPE_LAST] = {};
+  size_t cnt_data[kTypeLastPP+1] = {};
+  size_t cnt_descr[kTypeLastPP+1] = {};
   DataItem *item;
 
   LL_FOREACH( head, item ) {
+    int type = item->type & kTypeMask;
+    int flags = item->type & kTypeFlag;
+    
+
+    if( type == kTypeString && flags & kTypeConst ) {
+      type = kTypeConstString;
+    }
+
     cnt_total++;
-    cnt_descr[item->type & MSK_TYPE]++;
-    cnt_data[item->type & MSK_TYPE] += item->vec_items;
+    cnt_descr[type]++;
+
+    switch( type ) {
+      case kTypeConstString:
+        {
+          PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
+          cnt_data[type] +=  strlen( p->def_value ) * item->vec_items +1;
+        }
+        break;
+      default:
+        cnt_data[type] += item->vec_items;
+    }
+    
   }
   
 
@@ -869,15 +969,18 @@ int save_vc_def( FILE *fp, DataItem *head )
                "  g_data_int32,\n"
                "  %ld,\n"
                "  g_data_string,\n"
+               "  %ld,\n"
+               "  g_data_const_string,\n"
                "  %ld\n"
                "};\n",
                cnt_total,
-               cnt_descr[TYPE_INT16],
-               cnt_data[TYPE_INT16],
-               cnt_descr[TYPE_INT32],
-               cnt_data[TYPE_INT32],
+               cnt_descr[kTypeInt16],
+               cnt_data[kTypeInt16],
+               cnt_descr[kTypeInt32],
+               cnt_data[kTypeInt32],
 
-               cnt_data[TYPE_STRING]
+               cnt_data[kTypeString],
+               cnt_data[kTypeConstString]
          );
     return 0;
 }

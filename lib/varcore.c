@@ -170,11 +170,13 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 	ErrCode ret = kErrNone;
 	VAR_DESC const *var;
 	U16 type;
+	U16 flags;
 	
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = &s_vc_data->vars[hnd];
 	type = var->type & MSK_TYPE;
+	flags = var->type & kTypeFlag;
 	switch( type ) {
 
 		case TYPE_INT16:
@@ -247,19 +249,41 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 
 		case TYPE_STRING:
 		{
-			S32 idx = var->data_idx + chan * sizeof(STRBUF);
-			S32 max_idx = sizeof(STRBUF) * s_vc_data->data_str_cnt;
-			if( idx > max_idx ) {
-				return kErrInvalidChan;
+			if( chan > 0) {
+				ret = vc_chk_vector( var, chan );
+				if( ret != kErrNone ) {
+					return ret;
+				}
 			}
-			DATA_STRING *data = &s_vc_data->data_str[idx];
 
-			if( rdwr == VarWrite ) {
-				memcpy( data, val, sizeof(STRBUF));
+			if( flags & kTypeConst ) {
+
+				if( rdwr == VarWrite ) {
+					return kErrAccessDenied;
+				}
+
+				S32 idx = var->data_idx;
+				DATA_STRING const *data = &s_vc_data->data_const_str[idx];
+				size_t len = strlen(data);
+				len = len >= sizeof(STRBUF) ? sizeof(STRBUF)-1 : len;
+				memcpy( val, data, len );
+				val[len] = '\0';
 			}
 			else {
-				memcpy( val, data, sizeof(STRBUF));
-				val[sizeof(STRBUF)-1] = '\0';
+				S32 idx = var->data_idx + chan * sizeof(STRBUF);
+				S32 max_idx = sizeof(STRBUF) * s_vc_data->data_str_cnt;
+				if( idx > max_idx ) {
+					return kErrInvalidChan;
+				}
+				DATA_STRING *data = &s_vc_data->data_str[idx];
+
+				if( rdwr == VarWrite ) {
+					memcpy( data, val, sizeof(STRBUF));
+				}
+				else {
+					memcpy( val, data, sizeof(STRBUF));
+					val[sizeof(STRBUF)-1] = '\0';
+				}
 			}
 		}
 		break;
@@ -313,7 +337,6 @@ ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	
 	return ret;
 }
-
 
 /************************************************************************************/
 /**
