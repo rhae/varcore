@@ -77,9 +77,10 @@ typedef struct _PP_DATA_STRING {
 } PP_DATA_STRING;
 
 typedef struct _StringItem {
-  STRBUF str;                /* key for hash */
+  STRBUF buf;                /* key for hash */
   int len;
   int constant;
+  int offset;
   UT_hash_handle hh;         /* makes this structure hashable */
 } StringItem;
 
@@ -144,6 +145,9 @@ void handle_pragma( char const*, LOC const* );
 
 char *get_path( char *path, char const *fname );
 char *join_path( char *oname, char const *path, char const *fname );
+
+static int string_add( char const *s, int constant );
+static StringItem *string_get( char const *s );
 
 #if 0
 static int AddDefaultValue( char *, int , int *);
@@ -1119,24 +1123,41 @@ int  GetStorage( char * pStorage, int *pValue)
 
 
 
-static int string_add( char const *s, int n ) {
-  StringItem *str = (StringItem*)calloc( sizeof(StringItem), 1 );
+static int string_add( char const *s, int constant ) {
+  StringItem *str;
+  size_t len;
 
-  if( !str ) {
-    return 0;
-  }
+  str = string_get( s );
+  if( str ) {
+    return 1;
+  } 
 
-  size_t len = strlen( s );
+  len = strlen( s );
   if( len > s_Stats.max_string_hnd_len ) {
     s_Stats.max_string_hnd_len = len;
   }
+  
+  str = (StringItem*)calloc( sizeof(StringItem), 1 );
+  if( !str ) {
+    log_printf( LogErr, "No memory for new string." );
+    return 0;
+  }
 
-  strcpy( str->str, s );
-  str->len = n;
-  str->constant = 0;
-  HASH_ADD_STR( s_Strings, str, str );
+  strcpy( str->buf, s );
+  str->len = len;
+  str->constant = constant;
+  str->offset = -1;
+  HASH_ADD_STR( s_Strings, buf, str );
 
   return 1;
+}
+
+
+StringItem *string_get( char const *s ) {
+  StringItem *item;
+  HASH_FIND_STR( s_Strings, s, item );
+
+  return item;
 }
 
 #define CSV_COL( _buf, _col ) ((char*)(*_buf)[_col])
@@ -1155,17 +1176,14 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 
   PP_DATA_STRING *s = &item->data.data_string;
   if( 0 == strcmp("CONST", CSV_COL(cols, colModifier ))) {
-    item->type |= TYPE_CONST;
+    item->type |= kTypeConst;
   }
 
   char *str = CSV_COL(cols, colValue);
   strcpy( s->def_value, str );
 
-#if 0
-  if( (s->flags & TYPE_CONST) != 0) {
-    string_add( str, 1 );
-  }
-#endif
+  string_add( str, item->type & kTypeConst ? 1 : 0 );
+
   return 0;
 }
 
@@ -1276,7 +1294,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
       s = skip_space( s );
       strcpy( mbr->string, s );
 
-      string_add( s, 0 );
+      string_add( s, 1 );
     }
 
     d->cnt++;
