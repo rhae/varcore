@@ -5,6 +5,15 @@
  *      Author: hae
  */
 
+#include "defs.h"
+#include "loc.h"
+#include "log.h"
+#include "strpool.h"
+#include "utils.h"
+#include "utlist.h"
+#include "uthash.h"
+#include "../../lib/varcore.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,13 +21,6 @@
 #include <errno.h>
 #include <limits.h>
 
-#include "defs.h"
-#include "loc.h"
-#include "log.h"
-#include "utils.h"
-#include "utlist.h"
-#include "uthash.h"
-#include "../../lib/varcore.h"
 
 #ifndef UNUSED_PARAM
 #  define UNUSED_PARAM(x) (void)(x)
@@ -76,14 +78,6 @@ typedef struct _PP_DATA_STRING {
   int flags;
 } PP_DATA_STRING;
 
-typedef struct _StringItem {
-  STRBUF buf;                /* key for hash */
-  int len;
-  int constant;
-  int offset;
-  UT_hash_handle hh;         /* makes this structure hashable */
-} StringItem;
-
 typedef struct _DataItem {
   STRBUF hnd;
   STRBUF scpi;
@@ -93,7 +87,7 @@ typedef struct _DataItem {
   int type;
   int vec_items;
   int storage;
-  
+
   union _DATA {
     PP_DATA_INT data_int;
     PP_DATA_DOUBLE data_double;
@@ -146,9 +140,6 @@ void handle_pragma( char const*, LOC const* );
 char *get_path( char *path, char const *fname );
 char *join_path( char *oname, char const *path, char const *fname );
 
-static int string_add( char const *s, int constant );
-static StringItem *string_get( char const *s );
-
 #if 0
 static int AddDefaultValue( char *, int , int *);
 static void PrintDefaultValues( FILE *, DefaultValue_t *, char *);
@@ -156,11 +147,10 @@ static void PrintDefaultValues( FILE *, DefaultValue_t *, char *);
 
 typedef struct _Stats {
   size_t max_var_hnd_len;
-  size_t max_string_hnd_len;
 } Stats;
 
 DataItem     *s_Data = NULL;
-StringItem   *s_Strings = NULL;
+StringPool    s_StrPool;
 Stats         s_Stats;
 Config        s_Cfg;
 
@@ -215,6 +205,7 @@ int main( int argc, char **argv )
   defs_init();
   loc_init();
   log_init( LogInfo );
+  strpool_Init( &s_StrPool, 0 );
 
   /* initializes s_Cfg */
   handle_pragma( "#pragma section var", 0 );
@@ -242,7 +233,7 @@ int main( int argc, char **argv )
   log_printf( LogInfo, "Output path: %s", get_path( path, fname ));
 
   read_csv_file( &s_Data, fname );
- 
+
   save_inc_file( s_Data, join_path( oname, path, "vardefs.h"));
   save_var_file( s_Data, join_path( oname, path, "vardef.inc"));
 
@@ -305,7 +296,7 @@ char *join_path( char *oname, char const *path, char const *fname )
  */
 int read_csv_file( DataItem **head, char * szFilename)
 {
-  
+
   enum {
     ColHnd = 0,
     ColScpi = 1,
@@ -333,7 +324,7 @@ int read_csv_file( DataItem **head, char * szFilename)
 
   loc_push( szFilename, line_nr );
 
-  
+
   for(;;) {
 
     char *s = fgets( line, line_len, fp);
@@ -351,7 +342,7 @@ int read_csv_file( DataItem **head, char * szFilename)
 
     uCols = MaxCsvColumns;
     split( line, ';', (char**) cols, LineSize, &uCols );
-    
+
     if( cols[ColHnd][0] == '#' ) {
       char *p = skip_space( &cols[ColHnd][1] );
       if( 0 == strncmp("pragma", p, 6)) {
@@ -465,7 +456,7 @@ int save_inc_file( DataItem *head, char *szFilename )
       break;
     }
     fprintf(fp, "#define %s %s\n", d.name, d.value );
-    
+
   }
 
   fprintf(fp, "\n" );
@@ -509,13 +500,14 @@ int save_var_file( DataItem *head, char *szFilename )
 
     kTypeLastPP
   };
-  UNUSED_PARAM( head );
+
   int nRet;
   DataItem *item;
   int data_cnt[kTypeLastPP+1] = {};
   int descr_cnt[kTypeLastPP+1] = {};
 
-  memset(descr_cnt, 0, sizeof(descr_cnt));
+  memset( descr_cnt, 0, sizeof(descr_cnt));
+  memset( data_cnt, 0, sizeof(data_cnt));
 
   nRet = 1;
   int i = 1;
@@ -530,9 +522,18 @@ int save_var_file( DataItem *head, char *szFilename )
     char *spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
     int type = item->type & kTypeMask;
     int flags = item->type & kTypeFlag;
+    int data_idx = data_cnt[type];
 
-    if( type == kTypeString && flags & kTypeConst ) {
+    if(( type == kTypeString ) && ( flags & kTypeConst )) {
+      PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
+      StringItem *str = strpool_Get( &s_StrPool, p->def_value );
       type = kTypeConstString;
+
+      if( str->offset == -1 ) {
+        str->offset = data_cnt[type];
+      }
+
+      data_idx = str->offset;
     }
 
     if( i != 1 ) {
@@ -540,7 +541,7 @@ int save_var_file( DataItem *head, char *szFilename )
     }
 
     fprintf(fp, "  { %s,%s 0x%04x, 0x%04x, 0x%04x, % 4d, % 4d }",
-             item->hnd, spaces, item->type, item->vec_items, item->acc_rights, descr_cnt[type], data_cnt[type] );
+             item->hnd, spaces, item->type, item->vec_items, item->acc_rights, descr_cnt[type], data_idx );
     i++;
     switch( type ) {
       case kTypeInt16:
@@ -575,7 +576,7 @@ int save_var_file( DataItem *head, char *szFilename )
 
   save_descr_int( fp, head, "g_descr_int16", TYPE_INT16 );
   save_data_int( fp, head, "g_data_int16", TYPE_INT16 );
-  
+
   save_descr_int( fp, head, "g_descr_int32", TYPE_INT32 );
   save_data_int( fp, head, "g_data_int32", TYPE_INT32 );
 
@@ -588,7 +589,7 @@ int save_var_file( DataItem *head, char *szFilename )
   save_data_enum( fp, head, "g_data_enum", TYPE_ENUM );
 
   save_vc_def( fp, head );
-  
+
 
   fputs("/*** EOF *********/\n", fp );
   fclose( fp );
@@ -603,7 +604,7 @@ int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
   DataItem *item;
 
   switch( type ) {
-    
+
     case TYPE_INT16:
       ztype = "DATA_S16";
       zfmt = "  { %d, %d, %d }";
@@ -638,7 +639,7 @@ int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
 
     fprintf(fp, "  /* %s%s */", item->hnd, spaces );
     fprintf( fp, zfmt, data->def_value, data->min, data->max );
-    
+
     i++;
   }
   fputs( "\n};\n\n", fp );
@@ -695,7 +696,7 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type ) {
 
       fprintf( fp, zfmt, data->def_value, data->min, data->max );
     }
-    
+
     i++;
   }
   fputs( "\n};\n\n", fp );
@@ -752,7 +753,7 @@ int  save_data_float( FILE *fp, DataItem *head, char const *name, int type ) {
 
       fprintf( fp, zfmt, data->def_value, data->min, data->max );
     }
-    
+
     i++;
   }
   fputs( "\n};\n\n", fp );
@@ -792,7 +793,7 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
 
     fprintf(fp, "  /* %s */\n  ", item->hnd );
     for( int j = 0; j < item->vec_items; j++ ) {
-      
+
       if( j > 0 ) {
         fputs( ",\n  ", fp );
       }
@@ -804,7 +805,7 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
         fprintf( fp, "0x%02x", data->def_value[k] );
       }
     }
-    
+
     i++;
   }
   fputs( "\n};\n\n", fp );
@@ -844,7 +845,7 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
     fprintf(fp, "  /* %s */\n  ", item->hnd );
     for( int j = 0; j < item->vec_items; j++ ) {
       int k;
-      
+
       if( j > 0 ) {
         fputs( ",\n  ", fp );
       }
@@ -858,7 +859,7 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
         fprintf( fp, "0x%02x", *p );
       }
     }
-    
+
     i++;
   }
   fputs( ", 0x00\n};\n\n", fp );
@@ -896,7 +897,7 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
 
     fprintf(fp, "  /* %s */\n  ", item->hnd );
     for( int j = 0; j < item->vec_items; j++ ) {
-      
+
       if( j > 0 ) {
         fputs( ",\n  ", fp );
       }
@@ -909,11 +910,11 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
         if( k > 0 ) {
           fputs( ", ", fp );
         }
-        
+
         fprintf( fp, "%s, %d", mbr->hnd, mbr->value );
       }
     }
-    
+
     i++;
   }
   fputs( "\n};\n\n", fp );
@@ -937,7 +938,7 @@ enum {
   LL_FOREACH( head, item ) {
     int type = item->type & kTypeMask;
     int flags = item->type & kTypeFlag;
-    
+
 
     if( type == kTypeString && flags & kTypeConst ) {
       type = kTypeConstString;
@@ -956,9 +957,9 @@ enum {
       default:
         cnt_data[type] += item->vec_items;
     }
-    
+
   }
-  
+
 
   fputs( "VC_DATA g_var_data = {\n", fp );
   fprintf( fp, "  g_vars,\n"
@@ -1047,7 +1048,7 @@ int  get_vector( char *name, int *value )
   }
 
   errno = 0;
-  
+
   n = strtol( def->value, &endp, 0 );
   if( errno != 0 || *endp != '\0' ) {
     return -2;
@@ -1123,42 +1124,7 @@ int  GetStorage( char * pStorage, int *pValue)
 
 
 
-static int string_add( char const *s, int constant ) {
-  StringItem *str;
-  size_t len;
 
-  str = string_get( s );
-  if( str ) {
-    return 1;
-  } 
-
-  len = strlen( s );
-  if( len > s_Stats.max_string_hnd_len ) {
-    s_Stats.max_string_hnd_len = len;
-  }
-  
-  str = (StringItem*)calloc( sizeof(StringItem), 1 );
-  if( !str ) {
-    log_printf( LogErr, "No memory for new string." );
-    return 0;
-  }
-
-  strcpy( str->buf, s );
-  str->len = len;
-  str->constant = constant;
-  str->offset = -1;
-  HASH_ADD_STR( s_Strings, buf, str );
-
-  return 1;
-}
-
-
-StringItem *string_get( char const *s ) {
-  StringItem *item;
-  HASH_FIND_STR( s_Strings, s, item );
-
-  return item;
-}
 
 #define CSV_COL( _buf, _col ) ((char*)(*_buf)[_col])
 
@@ -1168,21 +1134,26 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
     colModifier = 7,
     colValue = 8
   };
+  char *s;
+  StringItem *si;
 
   if( col_cnt < colModifier ) {
     log_printf( LogErr, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
     return -1;
   }
 
-  PP_DATA_STRING *s = &item->data.data_string;
+  PP_DATA_STRING *ds = &item->data.data_string;
   if( 0 == strcmp("CONST", CSV_COL(cols, colModifier ))) {
     item->type |= kTypeConst;
   }
 
-  char *str = CSV_COL(cols, colValue);
-  strcpy( s->def_value, str );
+  s = CSV_COL(cols, colValue);
+  strcpy( ds->def_value, s );
 
-  string_add( str, item->type & kTypeConst ? 1 : 0 );
+  si = strpool_Add( &s_StrPool, s );
+  if( si ) {
+    si->constant = (item->type & kTypeConst) ? 1 : 0;
+  }
 
   return 0;
 }
@@ -1278,7 +1249,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
       s++;
     }
     strcpy( mbr->hnd, s );
-    
+
     mbr->value = i - colFirstMbr;
     if( col_cnt > 1 ) {
       s = CSV_COL( &Buf, 1 );
@@ -1290,11 +1261,16 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
     }
 
     if( col_cnt > 2 ) {
+      StringItem *si;
+
       s = CSV_COL( &Buf, 2 );
       s = skip_space( s );
       strcpy( mbr->string, s );
 
-      string_add( s, 1 );
+      si = strpool_Add( &s_StrPool, s );
+      if( si ) {
+        si->constant = 1;
+      }
     }
 
     d->cnt++;
@@ -1304,7 +1280,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 }
 
 static int find_opt( char const *p, char const **opt_list, char **endp, int *idx ) {
-  
+
   int found = 0;
   int i = 0;
 
@@ -1322,7 +1298,7 @@ static int find_opt( char const *p, char const **opt_list, char **endp, int *idx
   needle[len] = '\0';
 
   for( char const **opt = opt_list; *opt != NULL; opt++, i++ ) {
-    
+
     if( 0 == strcmp( *opt, needle )) {
       *idx = i;
       *endp = (char*) (p+len+1);
@@ -1372,6 +1348,6 @@ void handle_pragma( char const *line, LOC const *loc ) {
 
     default:
       UNHANDLED_CASE( idx );
-      
+
   }
 }
