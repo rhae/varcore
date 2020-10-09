@@ -140,11 +140,6 @@ void handle_pragma( char const*, LOC const* );
 char *get_path( char *path, char const *fname );
 char *join_path( char *oname, char const *path, char const *fname );
 
-#if 0
-static int AddDefaultValue( char *, int , int *);
-static void PrintDefaultValues( FILE *, DefaultValue_t *, char *);
-#endif
-
 typedef struct _Stats {
   size_t max_var_hnd_len;
 } Stats;
@@ -154,11 +149,6 @@ StringPool    s_StrPool;
 Stats         s_Stats;
 Config        s_Cfg;
 
-#if 0
-static DefaultValue_t *s_pInt16DefVal = NULL;
-static DefaultValue_t *s_pInt32DefVal = NULL;
-static DefaultValue_t *s_pFloatDefVal = NULL;
-#endif
 
 static int s_nVarCnt = 0;
 static int s_nTypeCnt[16] = { 0 };
@@ -468,19 +458,6 @@ int save_inc_file( DataItem *head, char *szFilename )
     fprintf(fp, "#define %s%s  0x%04x\n", item->hnd, spaces, i);
     i++;
   }
-
-#if 0
-  fputs( "\n/*** Strings ****/\n", fp );
-
-  STRINGS *cur, *tmp;
-  i = 0;
-  HASH_ITER( hh, s_Strings, cur, tmp ) {
-    int len = strlen( cur->str );
-    spaces = srepeat( ' ', 2 + s_Stats.max_string_hnd_len - len );
-    fprintf(fp, "#define %s%s  0x%04x\n", cur->str, spaces, i);
-    i++;
-  }
-#endif
 
   fputs("/*** EOF *********/\n", fp );
   fclose( fp );
