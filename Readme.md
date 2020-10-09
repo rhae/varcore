@@ -1,4 +1,8 @@
 
+# Warning
+The API and function names are subject to change.
+I am still working on a style guid and use it consitently.
+
 # Motivation
 Provide a software component for an ressource constrained system
 (embedded) that manages variables.
