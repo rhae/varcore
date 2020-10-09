@@ -1,0 +1,46 @@
+{
+  // Verwendet IntelliSense zum Ermitteln möglicher Attribute.
+  // Zeigen Sie auf vorhandene Attribute, um die zugehörigen Beschreibungen anzuzeigen.
+  // Weitere Informationen finden Sie unter https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "unit tests",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/test/tests",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Automatische Strukturierung und Einrückung für \"gdb\" aktivieren",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+    },
+    {
+      "name": "varpp",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/tools/varpp/varpp",
+      "args": ["${workspaceFolder}/tools/varpp/Res.csv"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Automatische Strukturierung und Einrückung für \"gdb\" aktivieren",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+    }
+  ]
+}
