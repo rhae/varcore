@@ -1,4 +1,32 @@
-
+/*
+ *  Copyright (c) 2020, Ruediger Haertel
+ *  All rights reserved.
+ *  
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *  
+ *  1. Redistributions of source code must retain the above copyright notice, this
+ *     list of conditions and the following disclaimer.
+ *  
+ *  2. Redistributions in binary form must reproduce the above copyright notice,
+ *     this list of conditions and the following disclaimer in the documentation
+ *     and/or other materials provided with the distribution.
+ *  
+ *  3. Neither the name of the copyright holder nor the names of its
+ *     contributors may be used to endorse or promote products derived from
+ *     this software without specific prior written permission.
+ *  
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ *  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ *  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #include "CUnit/CUnit.h"
 #include "varcore_test.h"
@@ -76,9 +104,9 @@ static int suite_clean(void) {
 
   CU_ASSERT_DOUBLE_EQUAL(10, 10.0001, 0.0001);
   CU_ASSERT_DOUBLE_NOT_EQUAL(-10, -10.001, -0.01);
-
 #endif
 
+/*** integer32 tests ********************************************************/
 static void rd32(void)
 {
   S32 ser = 0xaa55;
@@ -165,6 +193,8 @@ static CU_TestInfo tests_rdwr32[] = {
 	CU_TEST_INFO_NULL,
 };
 
+
+/*** integer16 tests ********************************************************/
 
 static void rd16(void)
 {
@@ -301,6 +331,8 @@ static CU_TestInfo tests_rdwr16[] = {
 	CU_TEST_INFO_NULL,
 };
 
+/*** volatile string tests **************************************************/
+
 static void rd_str(void) {
   STRBUF S;
   ErrCode ret;
@@ -333,6 +365,8 @@ static CU_TestInfo tests_rdwr_str[] = {
 	CU_TEST_INFO_NULL,
 };
 
+/*** constant string tests **************************************************/
+
 static void rd_const_str(void) {
   STRBUF S;
   ErrCode ret;
@@ -361,29 +395,13 @@ static CU_TestInfo tests_rd_const_str[] = {
 	CU_TEST_INFO_NULL,
 };
 
+/*** Suite definition  ******************************************************/
 
 static CU_SuiteInfo suites[] = {
   { "variable S32",  suite_init, suite_clean, NULL, NULL, tests_rdwr32 },
   { "variable S16",  suite_init, suite_clean, NULL, NULL, tests_rdwr16 },
   { "variable str",  suite_init, suite_clean, NULL, NULL, tests_rdwr_str },
   { "variable const str",  suite_init, suite_clean, NULL, NULL, tests_rd_const_str },
-  #if 0
-  { "suite_success_init",  suite_success_init, NULL,                NULL, NULL, tests_success},
-  { "suite_success_clean", NULL,               suite_success_clean, NULL, NULL, tests_success},
-  { "test_failure",        NULL,               NULL,                NULL, NULL, tests_failure},
-  { "suite_failure_both",  suite_failure_init, suite_failure_clean, NULL, NULL, tests_suitefailure}, /* tests should not run */
-  { "suite_failure_init",  suite_failure_init, NULL,                NULL, NULL, tests_suitefailure}, /* tests should not run */
-  { "suite_success_but_failure_clean", NULL,   suite_failure_clean, NULL, NULL, tests_suitefailure}, /* tests will run, suite counted as running, but suite tagged as a failure */
-  { "TestSimpleAssert",    NULL,               NULL,                NULL, NULL, tests_simple},
-  { "TestBooleanAssert",   NULL,               NULL,                NULL, NULL, tests_bool},
-  { "TestEqualityAssert",  NULL,               NULL,                NULL, NULL, tests_equal},
-  { "TestPointerAssert",   NULL,               NULL,                NULL, NULL, tests_ptr},
-  { "TestNullnessAssert",  NULL,               NULL,                NULL, NULL, tests_null},
-  { "TestStringAssert",    NULL,               NULL,                NULL, NULL, tests_string},
-  { "TestNStringAssert",   NULL,               NULL,                NULL, NULL, tests_nstring},
-  { "TestDoubleAssert",    NULL,               NULL,                NULL, NULL, tests_double},
-  { "TestFatal",           NULL,               NULL,                NULL, NULL, tests_fatal},
-  #endif
 	CU_SUITE_INFO_NULL,
 };
 
@@ -398,78 +416,4 @@ void S16_AddTests(void)
 			CU_get_error_msg());
 		exit(EXIT_FAILURE);
 	}
-
-/* implementation without shortcut registration
-  CU_pSuite pSuite;
-
-  pSuite = CU_add_suite("suite_success_both", suite_success_init, suite_success_clean);
-  CU_add_test(pSuite, "testSuccess1", testSuccess1);
-  CU_add_test(pSuite, "testSuccess2", testSuccess2);
-  CU_add_test(pSuite, "testSuccess3", testSuccess3);
-
-  pSuite = CU_add_suite("suite_success_init", suite_success_init, NULL);
-  CU_add_test(pSuite, "testSuccess1", testSuccess1);
-  CU_add_test(pSuite, "testSuccess2", testSuccess2);
-  CU_add_test(pSuite, "testSuccess3", testSuccess3);
-
-  pSuite = CU_add_suite("suite_success_clean", NULL, suite_success_clean);
-  CU_add_test(pSuite, "testSuccess1", testSuccess1);
-  CU_add_test(pSuite, "testSuccess2", testSuccess2);
-  CU_add_test(pSuite, "testSuccess3", testSuccess3);
-
-  pSuite = CU_add_suite("test_failure", NULL, NULL);
-  CU_add_test(pSuite, "testFailure1", testFailure1);
-  CU_add_test(pSuite, "testFailure2", testFailure2);
-  CU_add_test(pSuite, "testFailure3", testFailure3);
-
-  / * tests should not run * /
-  pSuite = CU_add_suite("suite_failure_both", suite_failure_init, suite_failure_clean);
-  CU_add_test(pSuite, "testSuiteFailure1", testSuiteFailure1);
-  CU_add_test(pSuite, "testSuiteFailure2", testSuiteFailure2);
-
-  / * tests should not run * /
-  pSuite = CU_add_suite("suite_failure_init", suite_failure_init, NULL);
-  CU_add_test(pSuite, "testSuiteFailure1", testSuiteFailure1);
-  CU_add_test(pSuite, "testSuiteFailure2", testSuiteFailure2);
-
-  / * tests will run, suite counted as running, but suite tagged as a failure * /
-  pSuite = CU_add_suite("suite_success_but_failure_clean", NULL, suite_failure_clean);
-  CU_add_test(pSuite, "testSuiteFailure1", testSuiteFailure1);
-  CU_add_test(pSuite, "testSuiteFailure2", testSuiteFailure2);
-
-  pSuite = CU_add_suite("TestSimpleAssert", NULL, NULL);
-  CU_add_test(pSuite, "testSimpleAssert", testSimpleAssert);
-  CU_add_test(pSuite, "testFail", testFail);
-
-  pSuite = CU_add_suite("TestBooleanAssert", NULL, NULL);
-  CU_add_test(pSuite, "testAssertTrue", testAssertTrue);
-  CU_add_test(pSuite, "testAssertFalse", testAssertFalse);
-
-  pSuite = CU_add_suite("TestEqualityAssert", NULL, NULL);
-  CU_add_test(pSuite, "testAssertEqual", testAssertEqual);
-  CU_add_test(pSuite, "testAssertNotEqual", testAssertNotEqual);
-
-  pSuite = CU_add_suite("TestPointerAssert", NULL, NULL);
-  CU_add_test(pSuite, "testAssertPtrEqual", testAssertPtrEqual);
-  CU_add_test(pSuite, "testAssertPtrNotEqual", testAssertPtrNotEqual);
-
-  pSuite = CU_add_suite("TestNullnessAssert", NULL, NULL);
-  CU_add_test(pSuite, "testAssertPtrNull", testAssertPtrNull);
-  CU_add_test(pSuite, "testAssertPtrNotNull", testAssertPtrNotNull);
-
-  pSuite = CU_add_suite("TestStringAssert", NULL, NULL);
-  CU_add_test(pSuite, "testAssertStringEqual", testAssertStringEqual);
-  CU_add_test(pSuite, "testAssertStringNotEqual", testAssertStringNotEqual);
-
-  pSuite = CU_add_suite("TestNStringAssert", NULL, NULL);
-  CU_add_test(pSuite, "testAssertNStringEqual", testAssertNStringEqual);
-  CU_add_test(pSuite, "testAssertNStringNotEqual", testAssertNStringNotEqual);
-
-  pSuite = CU_add_suite("TestDoubleAssert", NULL, NULL);
-  CU_add_test(pSuite, "testAssertDoubleEqual", testAssertDoubleEqual);
-  CU_add_test(pSuite, "testAssertDoubleNotEqual", testAssertDoubleNotEqual);
-
-  pSuite = CU_add_suite("TestFatal", NULL, NULL);
-  CU_add_test(pSuite, "testFatal", testFatal);
-*/
 }
