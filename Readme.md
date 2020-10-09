@@ -62,9 +62,12 @@ Start value is: VAR_
 - [ ] variable preprocessor, Windows exe
 - [x] int16, int32, float variables
 - [x] string variables
-- [ ] string (constant) variables
+- [x] string (constant) variables
+- [x] pool for constant strings
+- [ ] enum variables
 - [ ] binary
 - [ ] strings for later use in a programm
 - [ ] cmake
 - [ ] test suite (in progress)
+- [ ] sample programm for embedded (msp430)
 
