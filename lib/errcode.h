@@ -35,7 +35,7 @@
 /* constant definitions
 ----------------------------------------------------------------------------*/
 
-typedef enum {
+enum {
 	kErrNone      = 0,
 	kErrGeneric   = -1,
 
