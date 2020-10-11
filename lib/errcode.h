@@ -32,6 +32,8 @@
 
 #pragma once
 
+/* constant definitions
+----------------------------------------------------------------------------*/
 
 typedef enum {
 	kErrNone      = 0,
@@ -48,5 +50,13 @@ typedef enum {
 	kErrInvalidValue      = (kErrBase + 6),
 	kErrInvalidType       = (kErrBase + 7),
 
-	
-} ErrCode;
+};
+
+/* global defined data types
+----------------------------------------------------------------------------*/
+
+typedef int ErrCode;
+
+/* list of global defined functions
+----------------------------------------------------------------------------*/
+

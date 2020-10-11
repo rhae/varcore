@@ -32,18 +32,17 @@
 
 /**
  * \file varcore.h
- *
- *
- *      Author: hae
+ * \author: hae
  */
 
-#ifndef VARCORE_H_
-#define VARCORE_H_
+#pragma once
 
 #include "errcode.h"
 
 #include <stdint.h>
 
+/* constant definitions
+----------------------------------------------------------------------------*/
 enum {
 	VarWrite  = 0,
 	VarRead   = 1,
@@ -145,6 +144,8 @@ enum {
 	kFmtHex8
 };
 
+/* global defined data types
+----------------------------------------------------------------------------*/
 typedef char   S8;
 typedef short           S16;
 typedef unsigned short  U16;
@@ -256,10 +257,10 @@ typedef struct _VC_DATA {
 #endif
 } VC_DATA;
 
+/* list of global defined functions
+----------------------------------------------------------------------------*/
 int vc_init( VC_DATA const* );
 ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req );
 ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req );
 ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req );
 ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req );
-
-#endif /* VARCORE_H_ */

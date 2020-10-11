@@ -31,12 +31,21 @@
  */
 
 /**
- * \file varcore.c
- * \author: hae
+ * \file   varcore.c
+ * \author hae
  */
 
+/* local header */
 #include "varcore.h"
 
+/* project headers */
+
+/* header of common types */
+
+/* shared common header */
+
+
+/* header of standard C - libraries */
 #include <assert.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -44,6 +53,8 @@
 #include <errno.h>
 #include <string.h>
 
+/* constant definitions
+----------------------------------------------------------------------------*/
 #ifndef UNUSED_PARAM
 #  define UNUSED_PARAM(x) (void)(x)
 #endif
@@ -56,12 +67,36 @@
 # define countof(x) ( sizeof(x) / sizeof(x[0]) )
 #endif
 
-VC_DATA const *s_vc_data;
+/* local defined data types
+----------------------------------------------------------------------------*/
 
+/* list of external used functions, if not in headers
+----------------------------------------------------------------------------*/
+
+/* list of global defined functions
+----------------------------------------------------------------------------*/
+
+/* list of local defined functions
+----------------------------------------------------------------------------*/
 static int  vc_chk_vector( VAR_DESC const *, int8_t );
 
-static inline int is_vector( VAR_DESC const *var )
-{
+/* external variables
+----------------------------------------------------------------------------*/
+
+/* global variables
+----------------------------------------------------------------------------*/
+
+/* local defined variables
+----------------------------------------------------------------------------*/
+VC_DATA const *s_vc_data;
+
+
+
+/*** is_vector **************************************************************/
+/**
+ *   Check if variable is a vector.
+ */
+static inline int is_vector( VAR_DESC const *var ) {
 	int nRet;
 
 	nRet = 0;
@@ -72,6 +107,10 @@ static inline int is_vector( VAR_DESC const *var )
 	return nRet;
 }
 
+/*** acc_alloed *************************************************************/
+/**
+ *   Check if requested access is allowed.
+ */
 static inline ErrCode acc_allowed( VAR_DESC const *var, int rdwr, U16 req ) {
 
 	int needs_admin = var->acc_rights & REQ_ADMIN;
@@ -88,7 +127,7 @@ static inline ErrCode acc_allowed( VAR_DESC const *var, int rdwr, U16 req ) {
 	return kErrNone;
 }
 
-/************************************************************************************/
+/*** vc_init ****************************************************************/
 /**
  *
  *
@@ -110,7 +149,7 @@ int vc_get_access( HND hnd, int chan ) {
 	return var->acc_rights;
 }
 
-/************************************************************************************/
+/*** vc_as_int16 ************************************************************/
 /**
  *
  *
@@ -151,7 +190,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	return ret;
 }
 
-/************************************************************************************/
+/*** vc_as_int32 ************************************************************/
 /**
  *
  *
@@ -193,7 +232,7 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 }
 
 
-/************************************************************************************/
+/*** vc_as_string ***********************************************************/
 /**
  *
  *
@@ -329,7 +368,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 }
 
 
-/************************************************************************************/
+/*** vc_as_float ************************************************************/
 /**
  *
  *
@@ -370,7 +409,7 @@ ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	return ret;
 }
 
-/************************************************************************************/
+/*** vc_chk_vector **********************************************************/
 /**
  *
  *
@@ -389,4 +428,4 @@ static ErrCode vc_chk_vector( VAR_DESC const *var, int8_t chan )
 	return ret;
 }
 
-
+/*______________________________________________________________________EOF_*/
