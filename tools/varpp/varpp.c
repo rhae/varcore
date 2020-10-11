@@ -706,6 +706,13 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type ) {
 
     i++;
   }
+
+  if( 1 == i ) {
+    // No int16/int32 item was declared.
+    // Emit a 0 value. This prohibts a warning from the compiler.
+    fputs( "  { 0 }", fp );
+  }
+
   fputs( "\n};\n\n", fp );
 
   return 0;
@@ -763,6 +770,13 @@ int  save_data_float( FILE *fp, DataItem *head, char const *name, int type ) {
 
     i++;
   }
+
+  if( 1 == i ) {
+    // No float/double item was declared.
+    // Emit a 0 value. This prohibts a warning from the compiler.
+    fputs( "  { 0 }", fp );
+  }
+
   fputs( "\n};\n\n", fp );
 
   return 0;
