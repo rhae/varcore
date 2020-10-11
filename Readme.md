@@ -1,14 +1,14 @@
 
-# Warning
+# Code works Ahead!
 The API and function names are subject to change.
-I am still working on a style guid and use it consitently.
+I am still working on a style guid and use it consistently.
 
 # Motivation
 Provide a software component for an ressource constrained system
 (embedded) that manages variables.
-Variables are defined at compile time.
-Variables are defined in an CSV table.
-A preprocessor creates the required structures.
+Variables are defined at compile time
+and are defined in an CSV table.
+A variable preprocessor (varpp) creates the required structures.
 
 # Variable core
 
