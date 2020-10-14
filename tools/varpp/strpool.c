@@ -42,7 +42,7 @@ void strpool_Init( StringPool *sp, int AllowDuplicate ) {
 }
 
 
-StringItem *strpool_Add( StringPool *sp, char const *s ) {
+StringItem *strpool_Add( StringPool *sp, char const *s, void *priv ) {
   StringItem *str;
   size_t len;
 
@@ -65,6 +65,7 @@ StringItem *strpool_Add( StringPool *sp, char const *s ) {
   strcpy( str->buf, s );
   str->len = len;
   str->offset = -1;
+  str->priv = priv;
   HASH_ADD_STR( sp->Head, buf, str );
 
   return str;

@@ -97,7 +97,7 @@ typedef struct _ENUM_MBR_DESC {
   struct _ENUM_MBR_DESC *next;
 } ENUM_MBR_DESC;
 
-typedef struct _DATA_ENUM {
+typedef struct _PP_DATA_ENUM {
   int def_mbr;
   int cnt;
   ENUM_MBR_DESC *items;
@@ -161,6 +161,8 @@ int  save_data_float( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_string( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type );
+int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type );
+int  serialize_enum( char *, size_t, PP_DATA_ENUM * );
 int  save_vc_def( FILE *fp, DataItem *head );
 
 int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type );
@@ -176,6 +178,14 @@ typedef struct _Stats {
 
 DataItem     *s_Data = NULL;
 StringPool    s_StrPool;
+/**
+ * The s_EnumPool is a string pool that contains the
+ * serialized enum member description and a pointer to the
+ * PP_DATA_ENUM of the DataItem.
+ * 
+ * The enum pool ist the key to remove duplicate enuum descriptors.
+ */
+StringPool    s_EnumPool;
 Stats         s_Stats;
 Config        s_Cfg;
 
@@ -226,6 +236,7 @@ int main( int argc, char **argv )
   loc_init();
   log_init( LogInfo );
   strpool_Init( &s_StrPool, 0 );
+  strpool_Init( &s_EnumPool, 0 );
 
   /* initializes s_Cfg */
   handle_pragma( "#pragma section var", 0 );
@@ -530,17 +541,37 @@ int save_var_file( DataItem *head, char *szFilename )
     int type = item->type & kTypeMask;
     int flags = item->type & kTypeFlag;
     int data_idx = data_cnt[type];
+    int descr_idx = descr_cnt[type];
 
     if(( type == kTypeString ) && ( flags & kTypeConst )) {
-      PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
-      StringItem *str = strpool_Get( &s_StrPool, p->def_value );
+      PP_DATA_STRING *p = &item->data.data_string;
+      StringItem *si = strpool_Get( &s_StrPool, p->def_value );
       type = kTypeConstString;
 
-      if( str->offset == -1 ) {
-        str->offset = data_cnt[type];
+      if( si->offset == -1 ) {
+        si->offset = data_cnt[type];
       }
 
-      data_idx = str->offset;
+      data_idx = si->offset;
+    }
+    else if ( type == kTypeEnum ) {
+      PP_DATA_ENUM *d = &item->data.data_enum;
+      char *buf = calloc( 1024, 1 );
+      StringItem *si;
+
+      serialize_enum( buf, 1024, d );
+      si = strpool_Get( &s_EnumPool, buf );
+      if( !si ) {
+        log_printf( LogErr, "enum not found in pool.");
+        continue;
+      }
+
+      if( si->offset == -1 ) {
+        si->offset = descr_cnt[type];
+      }
+
+      descr_idx = si->offset;
+      free(buf);
     }
 
     if( i != 1 ) {
@@ -548,7 +579,7 @@ int save_var_file( DataItem *head, char *szFilename )
     }
 
     fprintf(fp, "  { %s,%s 0x%04x, 0x%04x, 0x%04x, % 4d, % 4d }",
-             item->hnd, spaces, item->type, item->vec_items, item->acc_rights, descr_cnt[type], data_idx );
+             item->hnd, spaces, item->type, item->vec_items, item->acc_rights, descr_idx, data_idx );
     i++;
     switch( type ) {
       case kTypeInt16:
@@ -556,27 +587,31 @@ int save_var_file( DataItem *head, char *szFilename )
       case kTypeFloat:
       case kTypeDouble:
         data_cnt[type] += item->vec_items;
+        descr_cnt[type]++;
         break;
 
       case kTypeString:
         data_cnt[type] += sizeof(STRBUF) * item->vec_items;
+        descr_cnt[type]++;
         break;
 
       case kTypeConstString:
         {
           PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
           data_cnt[type] +=  strlen( p->def_value ) * item->vec_items +1;
+          descr_cnt[type]++;
         }
         break;
 
       case TYPE_ENUM:
-        data_cnt[type] += 3 * item->data.data_enum.cnt;
+        descr_cnt[type] += 3 * item->data.data_enum.cnt +1;
+        data_cnt[type] += item->vec_items;
         break;
 
       default:
         UNHANDLED_CASE( type );
     }
-    descr_cnt[type]++;
+    
   }
 
   fputs( "\n};\n\n", fp );
@@ -594,6 +629,7 @@ int save_var_file( DataItem *head, char *szFilename )
   save_data_const_string( fp, head, "g_data_const_string", TYPE_STRING );
 
   save_data_enum( fp, head, "g_data_enum", TYPE_ENUM );
+  save_data_enum_mbr( fp, head, "g_enum_mbr", TYPE_ENUM );
 
   save_vc_def( fp, head );
 
@@ -896,7 +932,7 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
 
   switch( type ) {
     case TYPE_ENUM:
-      ztype = "uint16_t";
+      ztype = "S16";
       break;
 
     default:
@@ -912,28 +948,16 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
       continue;
     }
 
-    if( i != 1 ) {
-      fputs( ",\n", fp );
+    if( i > 1 ) {
+        fprintf( fp, ",\n" );
     }
 
     fprintf(fp, "  /* %s */\n  ", item->hnd );
     for( int j = 0; j < item->vec_items; j++ ) {
-
       if( j > 0 ) {
-        fputs( ",\n  ", fp );
+        fprintf( fp, ", " );
       }
-
-      fprintf(fp, "%d, %d, ", data->cnt, data->def_mbr );
-
-      ENUM_MBR_DESC *mbr = data->items;
-      size_t k = 0;
-      for(; mbr != NULL; mbr = mbr->next, k++ ) {
-        if( k > 0 ) {
-          fputs( ", ", fp );
-        }
-
-        fprintf( fp, "%s, %d", mbr->hnd, mbr->value );
-      }
+      fprintf(fp, "%d", data->def_mbr );
     }
 
     i++;
@@ -943,10 +967,81 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
   return 0;
 }
 
+int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type )
+{
+  enum { kBufSize = 1024 };
+  int i = 1;
+  char const *ztype;
+  DataItem *item;
+  char *buf;
+
+  switch( type ) {
+    case TYPE_ENUM:
+      ztype = "S16";
+      break;
+
+    default:
+      log_printf( LogErr, "ENUM: Type: %d not supported", type );
+      return -1;
+  }
+
+  buf = (char*)calloc( BufSize, 1 );
+  fprintf( fp, "%s const %s[] = {\n", ztype, name );
+  LL_FOREACH( head, item ) {
+    StringItem *si;
+    PP_DATA_ENUM *data = &item->data.data_enum;
+    ENUM_MBR_DESC *mbr = data->items;
+
+    if((item->type & MSK_TYPE) != type ) {
+      continue;
+    }
+
+    serialize_enum( buf, kBufSize, data );
+    si = strpool_Get( &s_EnumPool, buf );
+    if( !si ) {
+      log_printf( LogErr, "[%s:%d] enum for handle %s not found in enum pool.",
+        __FUNCTION__, __LINE__, item->hnd );
+      return -1;
+    }
+
+    if( si->offset == -2 )
+    {
+      continue;
+    }
+
+    if( i > 1 ) {
+        fprintf( fp, ",\n" );
+    }
+
+    fprintf(fp, "  /* %s */\n  ", item->hnd );
+    for( int j = 0; mbr; j++ ) {
+      size_t len = strlen( mbr->hnd );
+      char *spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
+      if( j == 0 ) {
+        fprintf(fp, "%d, ", data->cnt );
+      }
+      else {
+        fprintf(fp, ",\n     " );  
+      }
+      fprintf(fp, "%s,%s % 4d, % 4d", mbr->hnd, spaces, mbr->value, -1 );
+      mbr = mbr->next;
+    }
+    si->offset = -2;
+
+    i++;
+  }
+
+  fputs( "\n};\n\n", fp );
+  free(buf);
+
+  return 0;
+}
+
 int save_vc_def( FILE *fp, DataItem *head )
 {
 enum {
     kTypeConstString = kTypeLast,
+    kTypeEnumMbr,
 
     kTypeLastPP
   };
@@ -973,10 +1068,20 @@ enum {
         {
           PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
           cnt_data[type] +=  strlen( p->def_value ) * item->vec_items +1;
+          cnt_descr[type]++;
         }
         break;
+
+      case kTypeEnum:
+        {
+          cnt_data[type] += item->vec_items;
+          cnt_descr[type] += 1 + item->data.data_enum.cnt * 3;
+        }
+        break;
+
       default:
         cnt_data[type] += item->vec_items;
+        cnt_descr[type]++;
     }
 
   }
@@ -997,6 +1102,10 @@ enum {
                "  g_data_string,\n"
                "  %ld,\n"
                "  g_data_const_string,\n"
+               "  %ld,\n"
+               "  g_data_enum,\n"
+               "  %ld,\n"
+               "  g_enum_mbr,\n"
                "  %ld\n"
                "};\n",
                cnt_total,
@@ -1006,7 +1115,10 @@ enum {
                cnt_data[kTypeInt32],
 
                cnt_data[kTypeString],
-               cnt_data[kTypeConstString]
+               cnt_data[kTypeConstString],
+
+               cnt_data[kTypeEnum],
+               cnt_descr[kTypeEnumMbr]
          );
     return 0;
 }
@@ -1143,10 +1255,6 @@ int  GetStorage( char * pStorage, int *pValue)
   return -1;
 }
 
-
-
-
-
 #define CSV_COL( _buf, _col ) ((char*)(*_buf)[_col])
 
 static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
@@ -1171,7 +1279,7 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   s = CSV_COL(cols, colValue);
   strcpy( ds->def_value, s );
 
-  si = strpool_Add( &s_StrPool, s );
+  si = strpool_Add( &s_StrPool, s, 0 );
   if( si ) {
     si->constant = (item->type & kTypeConst) ? 1 : 0;
   }
@@ -1231,9 +1339,13 @@ static int parse_double( DataItem *item, size_t col_cnt, CSV_BUF *cols )
  */
 static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
+  enum { kBufSize = 512 };
   UNUSED_PARAM( col_cnt );
 
   CSV_BUF Buf;
+  PP_DATA_ENUM *d;
+  
+  char *s = calloc( BufSize, 1 );
 
   enum {
     colFirstMbr = 7
@@ -1244,24 +1356,26 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
     return -1;
   }
 
-  PP_DATA_ENUM *d = &item->data.data_enum;
+  d = &item->data.data_enum;
   d->def_mbr = 0;
   d->cnt = 0;
   d->items = NULL;
 
   int i = colFirstMbr;
   for( ; ; i++) {
+    ENUM_MBR_DESC *mbr;
+    uint32_t col_cnt;
 
     char *s = strtrim( CSV_COL( cols, i ), ' ');
     if( 0 == strlen( s )) {
       break;
     }
 
-    ENUM_MBR_DESC *mbr = (ENUM_MBR_DESC *)calloc( sizeof(ENUM_MBR_DESC), 1 );
+    mbr = (ENUM_MBR_DESC *)calloc( sizeof(ENUM_MBR_DESC), 1 );
     LL_APPEND( d->items, mbr );
 
     memset( Buf, 0, sizeof(Buf));
-    uint32_t col_cnt = MaxCsvColumns;
+    col_cnt = MaxCsvColumns;
     split( s, '=', (char**)Buf, LineSize, &col_cnt );
 
     s = CSV_COL( &Buf, 0 );
@@ -1283,12 +1397,11 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 
     if( col_cnt > 2 ) {
       StringItem *si;
-
       s = CSV_COL( &Buf, 2 );
       s = skip_space( s );
       strcpy( mbr->string, s );
 
-      si = strpool_Add( &s_StrPool, s );
+      si = strpool_Add( &s_StrPool, s, 0 );
       if( si ) {
         si->constant = 1;
       }
@@ -1297,7 +1410,64 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
     d->cnt++;
   }
 
+  serialize_enum( s, (size_t)kBufSize, d );
+  strpool_Add( &s_EnumPool, s, d );
+
+  free(s);
+
   return 0;
+}
+
+int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
+  char *s = Buf;
+  size_t rest = BufSize;
+  ENUM_MBR_DESC *mbr = enm->items;
+
+  for( int i = 0; i < enm->cnt; i++ ) {
+    int n;
+    
+    #if 0
+    // Don't mark the default value.
+    // This would lead to different enum mbr descriptors
+    // which is not necessary, since the default value
+    // is stored in the data.
+    if( mbr->value == enm->def_mbr ) {
+      *s = ':';
+      s++;
+    }
+    #endif
+
+    n = snprintf( s, rest, "%s=%d", mbr->hnd, mbr->value );
+    if( n <= 0 ) {
+      log_printf( LogErr, "%s: invalid length", __FUNCTION__ );
+      return 0;
+    }
+
+    s += n;
+    rest -= n;
+
+#if 0
+    // Don't append the symbol.
+    // This could even further reduce the number
+    // of enum mbr descriptors.
+    if( strlen(mbr->string) > 0 ) {
+      n = snprintf( s, rest, "=%s", mbr->string );
+      if( n <= 0 ) {
+        log_printf( LogErr, "%s: invalid length", __FUNCTION__ );
+        return 0;
+      }
+      s += n;
+      rest -= n;
+    }
+#endif
+    n = snprintf( s, rest, ";" );
+    s += n;
+    rest -= n;
+
+    mbr = mbr->next;
+  }
+
+  return s - BufSize;
 }
 
 static int find_opt( char const *p, char const **opt_list, char **endp, int *idx ) {

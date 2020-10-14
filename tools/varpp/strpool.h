@@ -40,6 +40,7 @@ typedef struct _StringItem {
   int len;
   int constant;
   int offset;
+  void *priv;
   UT_hash_handle hh;         /* makes this structure hashable */
 } StringItem;
 
@@ -50,7 +51,7 @@ typedef struct _StringPool {
 } StringPool;
 
 void         strpool_Init( StringPool *, int );
-StringItem  *strpool_Add( StringPool *, char const * );
+StringItem  *strpool_Add( StringPool *, char const *, void * );
 StringItem  *strpool_Get( StringPool *, char const * );
 
 int          strpool_MaxLen( StringPool * );

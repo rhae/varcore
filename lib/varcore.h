@@ -191,13 +191,21 @@ typedef struct _DATA_F64 {
 
 typedef S8 DATA_STRING;
 
-#if 0
-typedef struct _DATA_ENUM {
-	S16 cnt;
-	S16 def_value;
-	S16 
-} DATA_ENUM;
-#endif
+typedef struct _ENUM_MBR {
+	S16 hnd;
+	S16 value;
+	S16 symbol;
+} ENUM_MBR;
+
+typedef struct _DESCR_ENUM {
+	U16 cnt;
+	ENUM_MBR mbr[];
+} DESCR_ENUM;
+
+typedef S16 DATA_ENUM;
+typedef S16 DATA_ENUM_MBR;
+
+
 
 typedef struct _VAR_DESC {
 	HND         hnd;          /* Variablen handle */
@@ -233,6 +241,12 @@ typedef struct _VC_DATA {
 	DATA_STRING const *data_const_str;
 	HND             data_const_str_cnt;
 
+	S16             *data_enum;
+	HND              data_enum_cnt;
+
+	S16 const       *data_mbr;
+	HND              mbr_cnt;
+
 #if 0
 	DATA_F32    *descr_f32;
 	HND          descr_f32_cnt;
@@ -249,11 +263,6 @@ typedef struct _VC_DATA {
 	DATA_STRING *data_str;
 	HND          data_str_cnt;
 
-	DATA_ENUM   *data_enum;
-	HND          data_enum_cnt;
-
-	DATA_ENUM_MBR   *data_mbr;
-	HND              mbr_cnt;
 #endif
 } VC_DATA;
 
