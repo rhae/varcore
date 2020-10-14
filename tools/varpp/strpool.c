@@ -73,7 +73,15 @@ StringItem *strpool_Add( StringPool *sp, char const *s ) {
 
 StringItem *strpool_Get( StringPool *sp, char const *s ) {
   StringItem *item;
+  #if 0
   HASH_FIND_STR( sp->Head, s, item );
+  #else
+  for( item = sp->Head; item ; item = item->hh.next ) {
+    if( 0 == strcmp( s, item->buf )) {
+      break;
+    }
+  }
+  #endif
 
   return item;
 }
