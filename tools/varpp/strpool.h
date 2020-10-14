@@ -33,10 +33,10 @@
 #pragma once
 
 #include "uthash.h"
-#include "../../lib/varcore.h"
+
 
 typedef struct _StringItem {
-  STRBUF buf;                /* key for hash */
+  char buf[1024];                /* key for hash */
   int len;
   int constant;
   int offset;
