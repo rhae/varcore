@@ -157,15 +157,24 @@ int vc_get_access( HND hnd, int chan ) {
 ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	ErrCode ret = kErrNone;
 	VAR_DESC const *var;
-	DATA_S16 *data;
+	DATA_S16 *data_s16 = NULL;
+	DATA_ENUM *data_enum = NULL;
 
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = &s_vc_data->vars[hnd];
-	data = &s_vc_data->data_s16[var->data_idx + chan];
 
-	if((var->type & MSK_TYPE) != TYPE_INT16 ) {
-		return kErrInvalidType;
+	switch( var->type & MSK_TYPE ) {
+		case TYPE_INT16:
+			data_s16 = &s_vc_data->data_s16[var->data_idx + chan];
+			break;
+
+		case TYPE_ENUM:
+			data_enum = &s_vc_data->data_enum[var->data_idx];
+			break;
+
+		default:
+			return kErrInvalidType;
 	}
 
 	ret = acc_allowed( var, rdwr, req );
@@ -181,10 +190,11 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	}
 
 	if( rdwr == VarRead ) {
-		*val = data->def_value;
+		*val = data_s16 ? data_s16->def_value : *data_enum;
 	}
 	else {
-		data->def_value = *val;
+		S16 *def_value = data_s16 ? &data_s16->def_value : data_enum;
+		*def_value = *val;
 	}
 	
 	return ret;

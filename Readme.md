@@ -68,7 +68,7 @@ Start value is: VAR_
 - [x] string variables
 - [x] string (constant) variables
 - [x] pool for constant strings
-- [ ] enum variables
+- [x] enum variables
 - [ ] binary
 - [ ] strings for later use in a programm
 - [ ] cmake

@@ -397,6 +397,43 @@ static CU_TestInfo tests_rd_const_str[] = {
 	CU_TEST_INFO_NULL,
 };
 
+/*** enum tests *************************************************************/
+
+static void rd_enum(void) {
+  S16 LOD;
+  ErrCode ret;
+  
+  ret = vc_as_int16( VAR_LOD, VarRead, &LOD, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( LOD, 0 );
+
+  LOD = -1;
+  ret = vc_as_int16( VAR_LOD, VarRead, &LOD, 10, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNoVector );
+  CU_ASSERT_EQUAL( LOD, -1 );
+
+}
+
+static void wr_enum(void) {
+  S16 LOD;
+  ErrCode ret;
+  
+  LOD = 1;
+  ret = vc_as_int16( VAR_LOD, VarWrite, &LOD, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  
+  LOD = 99;
+  ret = vc_as_int16( VAR_LOD, VarRead, &LOD, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( LOD, 1 );
+}
+
+static CU_TestInfo tests_rdwr_enum[] = {
+  { "RD ENUM", rd_enum },
+  { "WR ENUM", wr_enum },
+	CU_TEST_INFO_NULL,
+};
+
 /*** Suite definition  ******************************************************/
 
 static CU_SuiteInfo suites[] = {
@@ -404,6 +441,7 @@ static CU_SuiteInfo suites[] = {
   { "variable S16",  suite_init, suite_clean, NULL, NULL, tests_rdwr16 },
   { "variable str",  suite_init, suite_clean, NULL, NULL, tests_rdwr_str },
   { "variable const str",  suite_init, suite_clean, NULL, NULL, tests_rd_const_str },
+  { "variable enum", suite_init, suite_clean, NULL, NULL, tests_rdwr_enum },
 	CU_SUITE_INFO_NULL,
 };
 
