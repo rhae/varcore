@@ -264,12 +264,13 @@ static void wr16_chan(void)
   CU_ASSERT_EQUAL16( temp[0], -99 );
 
 
+  temp[VEC_LEM-1] = 98;
   ret = vc_as_int16( VAR_TP1, VarWrite, &temp[VEC_LEM-1], VEC_LEM-1, REQ_PRG );
   CU_ASSERT_EQUAL16( ret, kErrNone );
   temp[VEC_LEM-1] = 99;
   ret = vc_as_int16( VAR_TP1, VarRead, &temp[VEC_LEM-1], VEC_LEM-1, REQ_PRG );
   CU_ASSERT_EQUAL16( ret, kErrNone );
-  CU_ASSERT_EQUAL16( temp[VEC_LEM-1], -99 );
+  CU_ASSERT_EQUAL16( temp[VEC_LEM-1], 98 );
 
   ret = vc_as_int16( VAR_TP1, VarWrite, &temp[0], VEC_LEM, REQ_PRG );
   CU_ASSERT_EQUAL16( ret, kErrInvalidChan );
@@ -434,6 +435,45 @@ static CU_TestInfo tests_rdwr_enum[] = {
 	CU_TEST_INFO_NULL,
 };
 
+static void dump(void) {
+
+  char *buf = calloc( 1024, 1 );
+  int n;
+
+  vc_dump_var( buf, 1024, VAR_LOD, 0 );
+  puts( buf );
+
+  vc_dump_var( buf, 1024, VAR_YNU, 0 );
+  puts( buf );
+
+  vc_dump_var( buf, 1024, VAR_TP1, 0 );
+  puts( buf );
+
+  vc_dump_var( buf, 1024, VAR_CO_NODEID, 0 );
+  puts( buf );
+
+  vc_dump_var( buf, 1024, VAR_CUR, 0 );
+  puts( buf );
+
+  // buffer too small. Not filled but closed with '\0'.
+  n = vc_dump_var( buf, 10, VAR_CUR, 0 );
+  CU_ASSERT_EQUAL( n, 0 );
+  CU_ASSERT_EQUAL( strlen(buf), 0 );
+
+  // buffer is partly filled.
+  memset( buf, 'F', 1024 );
+  n = vc_dump_var( buf, 255, VAR_CUR, 0 );
+  CU_ASSERT_EQUAL( n, 246 );
+  CU_ASSERT_EQUAL( strlen(buf), 246 );
+
+  free(buf);
+}
+
+static CU_TestInfo tests_dump[] = {
+  { "Dump variables", dump },
+	CU_TEST_INFO_NULL,
+};
+
 /*** Suite definition  ******************************************************/
 
 static CU_SuiteInfo suites[] = {
@@ -442,6 +482,7 @@ static CU_SuiteInfo suites[] = {
   { "variable str",  suite_init, suite_clean, NULL, NULL, tests_rdwr_str },
   { "variable const str",  suite_init, suite_clean, NULL, NULL, tests_rd_const_str },
   { "variable enum", suite_init, suite_clean, NULL, NULL, tests_rdwr_enum },
+  { "variable dump", suite_init, suite_clean, NULL, NULL, tests_dump },
 	CU_SUITE_INFO_NULL,
 };
 

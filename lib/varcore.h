@@ -273,3 +273,5 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req );
 ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req );
 ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req );
 ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req );
+
+int vc_dump_var( char *, U16, HND, U16 );
