@@ -598,7 +598,7 @@ int save_var_file( DataItem *head, char *szFilename )
       case kTypeConstString:
         {
           PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
-          data_cnt[type] +=  strlen( p->def_value ) * item->vec_items +1;
+          data_cnt[type] +=  strlen( p->def_value ) +1;
           descr_cnt[type]++;
         }
         break;
