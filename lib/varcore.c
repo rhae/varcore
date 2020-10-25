@@ -451,14 +451,17 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	int n;
 	int i;
 	U16 len = 0;
+	char *scpi;
 
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = &s_vc_data->vars[hnd];
 	type = var->type & MSK_TYPE;
+	scpi = var->scpi_idx == HNON ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
 
 	n = snprintf( &buf[len], bufsz - len,
 	  "===========================================\n"
+		"SCPI:               %s\n"
 		"Hnd:                %04X\n"
 		"Data type:          %s (%04X)\n"
 		"Items:              %d\n"
@@ -468,6 +471,7 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 		"Data\n"
 		"------------------------------------------\n"
 		,
+		scpi,
 		hnd,
 		type2str(type), var->type,
 		var->vec_items,

@@ -50,6 +50,7 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <limits.h>
+#include <ctype.h>
 
 
 #ifndef UNUSED_PARAM
@@ -176,8 +177,15 @@ typedef struct _Stats {
   size_t max_var_hnd_len;
 } Stats;
 
+enum {
+  spScpi,
+  spStrings,
+
+  spMax
+};
+
 DataItem     *s_Data = NULL;
-StringPool    s_StrPool;
+StringPool    s_StrPools[spMax];
 /**
  * The s_EnumPool is a string pool that contains the
  * serialized enum member description and a pointer to the
@@ -229,13 +237,15 @@ int main( int argc, char **argv )
   char *path = (char*) calloc( PATH_MAX, 1 );
   char *oname = (char*) calloc( PATH_MAX, 1 );
   char def[BufSize];
+  int res;
 
   memset( &s_Stats, 0, sizeof(Stats));
 
   defs_init();
   loc_init();
   log_init( LogInfo );
-  strpool_Init( &s_StrPool, 0 );
+  strpool_Init( &s_StrPools[spScpi], STRPOOL_DUP_FAIL );
+  strpool_Init( &s_StrPools[spStrings], STRPOOL_DUP_ALLOW );
   strpool_Init( &s_EnumPool, 0 );
 
   /* initializes s_Cfg */
@@ -263,16 +273,17 @@ int main( int argc, char **argv )
   log_printf( LogInfo, "Input File:  %s", fname );
   log_printf( LogInfo, "Output path: %s", get_path( path, fname ));
 
-  read_csv_file( &s_Data, fname );
-
-  save_inc_file( s_Data, join_path( oname, path, "vardefs.h"));
-  save_var_file( s_Data, join_path( oname, path, "vardef.inc"));
+  res = read_csv_file( &s_Data, fname );
+  if( res == 0 ) {
+    save_inc_file( s_Data, join_path( oname, path, "vardefs.h"));
+    save_var_file( s_Data, join_path( oname, path, "vardef.inc"));
+  }
 
   free( oname );
   free( path );
   free( fname );
 
-  return 0;
+  return res;
 }
 
 char *get_path( char* path, char const *fname ) {
@@ -320,6 +331,10 @@ char *join_path( char *oname, char const *path, char const *fname )
   return oname;
 }
 
+int is_hidden_scpi( char *s ) {
+  return 0 == strcmp( s, "---" );
+}
+
 /**
  *
  *
@@ -338,7 +353,7 @@ int read_csv_file( DataItem **head, char * szFilename)
     ColType = 6,
   };
 
-  int nRet;
+  int res;
   uint32_t uCols;
   FILE *fp;
   int line_nr = 0;
@@ -346,7 +361,7 @@ int read_csv_file( DataItem **head, char * szFilename)
   char line[LineSize];
   CSV_BUF cols;
 
-  nRet = 1;
+  res = 0;
   fp = fopen( szFilename, "r" );
   if( fp == NULL ) {
     log_printf( LogErr, strerror( errno ));
@@ -401,9 +416,16 @@ int read_csv_file( DataItem **head, char * szFilename)
     strcpy( item->hnd, cols[ColHnd] );
     strcpy( item->scpi, cols[ColScpi] );
 
+    StringItem *si = strpool_Add( &s_StrPools[spScpi], cols[ColScpi], 0 );
+    if( !si && !is_hidden_scpi(cols[ColScpi])) {
+      log_printf( LogErr, "SCPI %s already in use.", cols[ColScpi] );
+      res = -2;
+      break;
+    }
+
     log_printf( LogDebug, "Process %s with type %s", cols[ColHnd], cols[ColType] );
-    nRet = GetType( cols[ColType], &item->type );
-    if ( nRet ) {
+    int ret = GetType( cols[ColType], &item->type );
+    if ( ret ) {
       log_printf( LogInfo, "unknown datatype: %s", cols[ColType] );
       free( item );
       continue;
@@ -457,7 +479,7 @@ int read_csv_file( DataItem **head, char * szFilename)
 
   loc_pop();
 
-  return nRet;
+  return res;
 }
 
 
@@ -523,6 +545,9 @@ int save_var_file( DataItem *head, char *szFilename )
   DataItem *item;
   int data_cnt[kTypeLastPP+1] = {};
   int descr_cnt[kTypeLastPP+1] = {};
+  spool_iter iter;
+  S16 scpi_idx = 0;
+  int scpi_ofs = 0;
 
   memset( descr_cnt, 0, sizeof(descr_cnt));
   memset( data_cnt, 0, sizeof(data_cnt));
@@ -534,6 +559,25 @@ int save_var_file( DataItem *head, char *szFilename )
 
   fputs( "VAR_DESC g_vars[] = {\n", fp );
 
+  strpool_iter( &iter, &s_StrPools[spScpi] );
+  for(;;) {
+    StringItem *si;
+    int ret;
+
+    ret = strpool_next2( &iter, &si );
+    if( !ret ) {
+      break;
+    }
+
+    if( is_hidden_scpi( si->buf )) {
+      continue;
+    }
+
+    si->offset = scpi_idx;
+    scpi_idx += strlen( si->buf ) +1;
+  }
+
+  scpi_ofs = scpi_idx;
   LL_FOREACH( head, item ) {
 
     int len = strlen( item->hnd );
@@ -545,14 +589,14 @@ int save_var_file( DataItem *head, char *szFilename )
 
     if(( type == kTypeString ) && ( flags & kTypeConst )) {
       PP_DATA_STRING *p = &item->data.data_string;
-      StringItem *si = strpool_Get( &s_StrPool, p->def_value );
+      StringItem *si = strpool_Get( &s_StrPools[spStrings], p->def_value );
       type = kTypeConstString;
 
       if( si->offset == -1 ) {
         si->offset = data_cnt[type];
       }
 
-      data_idx = si->offset;
+      data_idx = si->offset + scpi_ofs;
     }
     else if ( type == kTypeEnum ) {
       PP_DATA_ENUM *d = &item->data.data_enum;
@@ -578,8 +622,11 @@ int save_var_file( DataItem *head, char *szFilename )
       fputs( ",\n", fp );
     }
 
-    fprintf(fp, "  { %s,%s 0x%04x, 0x%04x, 0x%04x, % 4d, % 4d }",
-             item->hnd, spaces, item->type, item->vec_items, item->acc_rights, descr_idx, data_idx );
+    StringItem *si = strpool_Get( &s_StrPools[spScpi], item->scpi );
+    scpi_idx = si->offset;
+
+    fprintf(fp, "  { %s,%s 0x%04hx, 0x%04x, 0x%04x, 0x%04x, % 4d, % 4d }",
+             item->hnd, spaces, scpi_idx, item->type, item->vec_items, item->acc_rights, descr_idx, data_idx );
     i++;
     switch( type ) {
       case kTypeInt16:
@@ -886,6 +933,23 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
   }
 
   fprintf( fp, "%s %s[] = {\n", ztype, name );
+
+  LL_FOREACH( head, item ) {
+    char *s = item->scpi;
+
+    if( is_hidden_scpi( s )) {
+      continue;
+    }
+
+    fputs( "  ", fp );
+    while( *s ) {
+      fprintf( fp, "'%c', ", *s );
+      s++;
+    }
+    fputs( "0,\n", fp );
+  }
+
+
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
@@ -913,7 +977,12 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
           fputs( ", ", fp );
         }
 
-        fprintf( fp, "0x%02x", *p );
+        if( isascii( *p )) {
+          fprintf( fp, "'%c'", *p );
+        }
+        else {
+          fprintf( fp, "0x%02x", *p );
+        }
       }
     }
 
@@ -1279,7 +1348,7 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   s = CSV_COL(cols, colValue);
   strcpy( ds->def_value, s );
 
-  si = strpool_Add( &s_StrPool, s, 0 );
+  si = strpool_Add( &s_StrPools[spStrings], s, 0 );
   if( si ) {
     si->constant = (item->type & kTypeConst) ? 1 : 0;
   }
@@ -1401,7 +1470,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
       s = skip_space( s );
       strcpy( mbr->string, s );
 
-      si = strpool_Add( &s_StrPool, s, 0 );
+      si = strpool_Add( &s_StrPools[spStrings], s, 0 );
       if( si ) {
         si->constant = 1;
       }

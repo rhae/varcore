@@ -462,9 +462,9 @@ static void dump(void) {
 
   // buffer is partly filled.
   memset( buf, 'F', 1024 );
-  n = vc_dump_var( buf, 255, VAR_CUR, 0 );
-  CU_ASSERT_EQUAL( n, 246 );
-  CU_ASSERT_EQUAL( strlen(buf), 246 );
+  n = vc_dump_var( buf, 282, VAR_CUR, 0 );
+  CU_ASSERT_EQUAL( n, 270 );
+  CU_ASSERT_EQUAL( strlen(buf), 270 );
 
   free(buf);
 }
