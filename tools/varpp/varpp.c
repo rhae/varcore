@@ -586,6 +586,7 @@ int save_var_file( DataItem *head, char *szFilename )
     int flags = item->type & kTypeFlag;
     int data_idx = data_cnt[type];
     int descr_idx = descr_cnt[type];
+    int incr_descr = 1;
 
     if(( type == kTypeString ) && ( flags & kTypeConst )) {
       PP_DATA_STRING *p = &item->data.data_string;
@@ -610,8 +611,10 @@ int save_var_file( DataItem *head, char *szFilename )
         continue;
       }
 
+      incr_descr = 0;
       if( si->offset == -1 ) {
         si->offset = descr_cnt[type];
+        incr_descr = 1;
       }
 
       descr_idx = si->offset;
@@ -651,7 +654,9 @@ int save_var_file( DataItem *head, char *szFilename )
         break;
 
       case TYPE_ENUM:
-        descr_cnt[type] += 3 * item->data.data_enum.cnt +1;
+        if( incr_descr ) {
+          descr_cnt[type] += 3* item->data.data_enum.cnt +1;
+        }
         data_cnt[type] += item->vec_items;
         break;
 
