@@ -466,6 +466,12 @@ static void dump(void) {
   CU_ASSERT_EQUAL( n, 270 );
   CU_ASSERT_EQUAL( strlen(buf), 270 );
 
+  S16 YNU = -1;
+  vc_as_int16( VAR_YNU, VarWrite, &YNU, 0, REQ_PRG );
+  vc_as_int16( VAR_YNU, VarWrite, &YNU, 5, REQ_PRG );
+  vc_dump_var( buf, 1024, VAR_YNU, 0 );
+  puts( buf );
+
   free(buf);
 }
 

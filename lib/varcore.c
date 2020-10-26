@@ -447,6 +447,7 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 
 
 	VAR_DESC const *var;
+	STRBUF spaces;
 	U16 type;
 	int n;
 	int i;
@@ -454,6 +455,8 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	char *scpi;
 
 	assert( hnd < s_vc_data->var_cnt );
+
+	memset( spaces, ' ', sizeof(STRBUF));
 
 	var = &s_vc_data->vars[hnd];
 	type = var->type & MSK_TYPE;
@@ -554,7 +557,9 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 			break;
 
 		case TYPE_ENUM:
-			for( i = 0; i < var->vec_items; i++ ) {
+			{
+				#if 0
+				for( i = 0; i < var->vec_items; i++ ) {
 				DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->data_idx];
 				DATA_ENUM *d = (DATA_ENUM *)&s_vc_data->data_enum[var->data_idx];
 
@@ -567,6 +572,54 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 				n = snprintf( &buf[len], bufsz - len, "  %5hd\n", *d );
 				CHECK_LEN( buf, n, len, bufsz );
 				len += n;
+				}
+				#else
+				DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->descr_idx];
+				for( U16 i = 0; i < dscr->cnt; i++ ) {
+					ENUM_MBR const *mbr = (ENUM_MBR const *)&dscr->mbr[i];
+					STRBUF S;
+					int flag = 0;
+					int x;
+
+					vc_as_string( mbr->hnd, VarRead, S, chan, REQ_PRG );
+					x = strlen( S );
+					spaces[11-x] = '\0';
+					n = snprintf( &buf[len], bufsz - len, "%2d:  %s%s %4d", i, S, spaces, mbr->value );
+					spaces[11-x] = ' ';
+					CHECK_LEN( buf, n, len, bufsz );
+					len += n;
+						
+					for( U16 c = 0; c < var->vec_items; c++ ) {
+						U16 idx = var->data_idx + c;
+						DATA_ENUM *d = (DATA_ENUM *)&s_vc_data->data_enum[idx];
+
+						if( *d == mbr->value ) {
+							if( !flag ) {
+								n = snprintf( &buf[len], bufsz - len, " <= [" );
+								flag = 1;
+							}
+							else {
+								n = snprintf( &buf[len], bufsz - len, ", " );
+							}
+							CHECK_LEN( buf, n, len, bufsz );
+							len += n;
+
+							n = snprintf( &buf[len], bufsz - len, "%d", c+1 );
+							CHECK_LEN( buf, n, len, bufsz );
+							len += n;
+						}
+					}
+
+					if( flag ) {
+						n = snprintf( &buf[len], bufsz - len, "]\n" );
+					}
+					else {
+						n = snprintf( &buf[len], bufsz - len, "\n" );
+					}
+					CHECK_LEN( buf, n, len, bufsz );
+					len += n;
+				}
+				#endif
 			}
 			break;
 	}
