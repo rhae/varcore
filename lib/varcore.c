@@ -558,22 +558,6 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 
 		case TYPE_ENUM:
 			{
-				#if 0
-				for( i = 0; i < var->vec_items; i++ ) {
-				DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->data_idx];
-				DATA_ENUM *d = (DATA_ENUM *)&s_vc_data->data_enum[var->data_idx];
-
-				if( var->vec_items > 1 ) {
-					n = snprintf( &buf[len], bufsz - len, " %3d:", i );
-					CHECK_LEN( buf, n, len, bufsz );
-					len += n;	
-				}
-
-				n = snprintf( &buf[len], bufsz - len, "  %5hd\n", *d );
-				CHECK_LEN( buf, n, len, bufsz );
-				len += n;
-				}
-				#else
 				DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->descr_idx];
 				for( U16 i = 0; i < dscr->cnt; i++ ) {
 					ENUM_MBR const *mbr = (ENUM_MBR const *)&dscr->mbr[i];
@@ -619,7 +603,6 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 					CHECK_LEN( buf, n, len, bufsz );
 					len += n;
 				}
-				#endif
 			}
 			break;
 	}
