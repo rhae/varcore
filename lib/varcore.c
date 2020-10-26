@@ -188,7 +188,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 			break;
 
 		case TYPE_ENUM:
-			data_enum = &s_vc_data->data_enum[var->data_idx];
+			data_enum = &s_vc_data->data_enum[var->data_idx + chan];
 			break;
 
 		default:
