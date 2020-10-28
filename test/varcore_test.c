@@ -417,6 +417,7 @@ static void rd_enum(void) {
 
 static void wr_enum(void) {
   S16 LOD;
+  S16 YNU;
   ErrCode ret;
   
   LOD = 1;
@@ -427,6 +428,19 @@ static void wr_enum(void) {
   ret = vc_as_int16( VAR_LOD, VarRead, &LOD, 0, REQ_PRG );
   CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_EQUAL( LOD, 1 );
+
+  YNU = 99;
+  ret = vc_as_int16( VAR_YNU, VarRead, &YNU, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( YNU, -2 );
+
+  YNU = -1;
+  ret = vc_as_int16( VAR_YNU, VarWrite, &YNU, 5, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  YNU = 99;
+  ret = vc_as_int16( VAR_YNU, VarRead, &YNU, 5, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( YNU, -1 );
 }
 
 static CU_TestInfo tests_rdwr_enum[] = {
