@@ -444,7 +444,7 @@ int read_csv_file( DataItem **head, char * szFilename)
 
     // uFlags = nType | nStorage | nAccess | nVector;
 
-    switch( item->type & MSK_TYPE ) {
+    switch( item->type & TYPE_MASK ) {
       case TYPE_ACTION:
         break;
 
@@ -536,7 +536,7 @@ int save_inc_file( DataItem *head, char *szFilename )
 int save_var_file( DataItem *head, char *szFilename )
 {
   enum {
-    kTypeConstString = kTypeLast,
+    kTypeConstString = TYPE_LAST,
 
     kTypeLastPP
   };
@@ -582,13 +582,13 @@ int save_var_file( DataItem *head, char *szFilename )
 
     int len = strlen( item->hnd );
     char *spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
-    int type = item->type & kTypeMask;
-    int flags = item->type & kTypeFlag;
+    int type = item->type & TYPE_MASK;
+    int flags = item->type & TYPE_FLAG;
     int data_idx = data_cnt[type];
     int descr_idx = descr_cnt[type];
     int incr_descr = 1;
 
-    if(( type == kTypeString ) && ( flags & kTypeConst )) {
+    if(( type == TYPE_STRING ) && ( flags & TYPE_CONST )) {
       PP_DATA_STRING *p = &item->data.data_string;
       StringItem *si = strpool_Get( &s_StrPools[spStrings], p->def_value );
       type = kTypeConstString;
@@ -599,7 +599,7 @@ int save_var_file( DataItem *head, char *szFilename )
 
       data_idx = si->offset + scpi_ofs;
     }
-    else if ( type == kTypeEnum ) {
+    else if ( type == TYPE_ENUM ) {
       PP_DATA_ENUM *d = &item->data.data_enum;
       char *buf = calloc( 1024, 1 );
       StringItem *si;
@@ -632,15 +632,15 @@ int save_var_file( DataItem *head, char *szFilename )
              item->hnd, spaces, scpi_idx, item->type, item->vec_items, item->acc_rights, descr_idx, data_idx );
     i++;
     switch( type ) {
-      case kTypeInt16:
-      case kTypeInt32:
-      case kTypeFloat:
-      case kTypeDouble:
+      case TYPE_INT16:
+      case TYPE_INT32:
+      case TYPE_FLOAT:
+      case TYPE_DOUBLE:
         data_cnt[type] += item->vec_items;
         descr_cnt[type]++;
         break;
 
-      case kTypeString:
+      case TYPE_STRING:
         data_cnt[type] += sizeof(STRBUF) * item->vec_items;
         descr_cnt[type]++;
         break;
@@ -721,7 +721,7 @@ int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
     char *spaces;
     PP_DATA_INT *data = &item->data.data_int;
 
-    if((item->type & MSK_TYPE) != type ) {
+    if((item->type & TYPE_MASK) != type ) {
       continue;
     }
 
@@ -770,7 +770,7 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type ) {
     char *spaces;
     PP_DATA_INT *data = &item->data.data_int;
 
-    if((item->type & MSK_TYPE) != type ) {
+    if((item->type & TYPE_MASK) != type ) {
       continue;
     }
 
@@ -834,7 +834,7 @@ int  save_data_float( FILE *fp, DataItem *head, char const *name, int type ) {
     char *spaces;
     PP_DATA_DOUBLE *data = &item->data.data_double;
 
-    if((item->type & MSK_TYPE) != type ) {
+    if((item->type & TYPE_MASK) != type ) {
       continue;
     }
 
@@ -890,8 +890,8 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
-    U16 type = item->type & kTypeMask;
-    U16 isConst = (item->type & kTypeFlag) & kTypeConst;
+    U16 type = item->type & TYPE_MASK;
+    U16 isConst = (item->type & TYPE_FLAG) & TYPE_CONST;
     if( type != TYPE_STRING || (type == TYPE_STRING && isConst)) {
       continue;
     }
@@ -958,8 +958,8 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
-    U16 type = item->type & kTypeMask;
-    U16 isConst = (item->type & kTypeFlag) & kTypeConst;
+    U16 type = item->type & TYPE_MASK;
+    U16 isConst = (item->type & TYPE_FLAG) & TYPE_CONST;
     if( type != TYPE_STRING || (type == TYPE_STRING && !isConst)) {
       continue;
     }
@@ -1018,7 +1018,7 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
   LL_FOREACH( head, item ) {
     PP_DATA_ENUM *data = &item->data.data_enum;
 
-    if((item->type & MSK_TYPE) != type ) {
+    if((item->type & TYPE_MASK) != type ) {
       continue;
     }
 
@@ -1072,7 +1072,7 @@ int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type )
     PP_DATA_ENUM *data = &item->data.data_enum;
     ENUM_MBR_DESC *mbr = data->items;
 
-    if((item->type & MSK_TYPE) != type ) {
+    if((item->type & TYPE_MASK) != type ) {
       continue;
     }
 
@@ -1120,7 +1120,7 @@ int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type )
 int save_vc_def( FILE *fp, DataItem *head )
 {
 enum {
-    kTypeConstString = kTypeLast,
+    kTypeConstString = TYPE_LAST,
     kTypeEnumMbr,
 
     kTypeLastPP
@@ -1132,11 +1132,11 @@ enum {
   DataItem *item;
 
   LL_FOREACH( head, item ) {
-    int type = item->type & kTypeMask;
-    int flags = item->type & kTypeFlag;
+    int type = item->type & TYPE_MASK;
+    int flags = item->type & TYPE_FLAG;
 
 
-    if( type == kTypeString && flags & kTypeConst ) {
+    if( type == TYPE_STRING && flags & TYPE_CONST ) {
       type = kTypeConstString;
     }
 
@@ -1152,7 +1152,7 @@ enum {
         }
         break;
 
-      case kTypeEnum:
+      case TYPE_ENUM:
         {
           cnt_data[type] += item->vec_items;
           cnt_descr[type] += 1 + item->data.data_enum.cnt * 3;
@@ -1189,15 +1189,15 @@ enum {
                "  %ld\n"
                "};\n",
                cnt_total,
-               cnt_descr[kTypeInt16],
-               cnt_data[kTypeInt16],
-               cnt_descr[kTypeInt32],
-               cnt_data[kTypeInt32],
+               cnt_descr[TYPE_INT16],
+               cnt_data[TYPE_INT16],
+               cnt_descr[TYPE_INT32],
+               cnt_data[TYPE_INT32],
 
-               cnt_data[kTypeString],
+               cnt_data[TYPE_STRING],
                cnt_data[kTypeConstString],
 
-               cnt_data[kTypeEnum],
+               cnt_data[TYPE_ENUM],
                cnt_descr[kTypeEnumMbr]
          );
     return 0;
@@ -1353,7 +1353,7 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 
   PP_DATA_STRING *ds = &item->data.data_string;
   if( 0 == strcmp("CONST", CSV_COL(cols, colModifier ))) {
-    item->type |= kTypeConst;
+    item->type |= TYPE_CONST;
   }
 
   s = CSV_COL(cols, colValue);
@@ -1361,7 +1361,7 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 
   si = strpool_Add( &s_StrPools[spStrings], s, 0 );
   if( si ) {
-    si->constant = (item->type & kTypeConst) ? 1 : 0;
+    si->constant = (item->type & TYPE_CONST) ? 1 : 0;
   }
 
   return 0;

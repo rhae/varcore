@@ -182,7 +182,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 
 	var = &s_vc_data->vars[hnd];
 
-	switch( var->type & MSK_TYPE ) {
+	switch( var->type & TYPE_MASK ) {
 		case TYPE_INT16:
 			data_s16 = &s_vc_data->data_s16[var->data_idx + chan];
 			break;
@@ -233,7 +233,7 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 	var = &s_vc_data->vars[hnd];
 	data = &s_vc_data->data_s32[var->data_idx + chan];
 
-	if((var->type & MSK_TYPE) != TYPE_INT32 ) {
+	if((var->type & TYPE_MASK) != TYPE_INT32 ) {
 		return kErrInvalidType;
 	}
 
@@ -274,8 +274,8 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = &s_vc_data->vars[hnd];
-	type = var->type & MSK_TYPE;
-	flags = var->type & kTypeFlag;
+	type = var->type & TYPE_MASK;
+	flags = var->type & TYPE_FLAG;
 	switch( type ) {
 
 		case TYPE_INT16:
@@ -355,7 +355,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				}
 			}
 
-			if( flags & kTypeConst ) {
+			if( flags & TYPE_CONST ) {
 
 				if( rdwr == VarWrite ) {
 					return kErrAccessDenied;
@@ -411,7 +411,7 @@ ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	var = &s_vc_data->vars[hnd];
 	data = &s_vc_data->data_s32[var->data_idx + chan];
 
-	if((var->type & MSK_TYPE) != TYPE_INT32 ) {
+	if((var->type & TYPE_MASK) != TYPE_INT32 ) {
 		return kErrInvalidType;
 	}
 
@@ -452,15 +452,15 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	int n;
 	int i;
 	U16 len = 0;
-	char *scpi;
+	char const *scpi;
 
 	assert( hnd < s_vc_data->var_cnt );
 
 	memset( spaces, ' ', sizeof(STRBUF));
 
 	var = &s_vc_data->vars[hnd];
-	type = var->type & MSK_TYPE;
-	scpi = var->scpi_idx == HNON ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
+	type = var->type & TYPE_MASK;
+	scpi = (var->scpi_idx == HNON) ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
 
 	n = snprintf( &buf[len], bufsz - len,
 	  "===========================================\n"

@@ -64,33 +64,16 @@ enum {
 	TYPE_VECTOR  = 0x1000,
 	TYPE_CONST   = 0x2000,
 
-	MSK_TYPE     = 0x000f,
-
-	kTypeInt8    =  0,
-	kTypeInt16   =  1,
-	kTypeInt32   =  2,
-	kTypeInt64   =  3,
-	kTypeFloat   =  4,
-	kTypeDouble  =  5,
-	kTypeEnum    =  6,
-	kTypeString  =  7,
-	kTypeAction  =  8,
-
-	kTypeLast    =  9,
-
-  kTypeVector  = 0x1000,
-	kTypeConst   = 0x2000,
-	
-	kTypeMask    = 0x000F,
-	kTypeFlag    = 0xF000,
+	TYPE_FLAG    = 0xf000,
+	TYPE_MASK    = 0x000f,
 };
 
 enum {
-      RAM_VOLATILE   = 0x0000,
-      EEPROM         = 0x2000,
-      FLASH          = 0x4000,
+	RAM_VOLATILE   = 0x0000,
+	EEPROM         = 0x2000,
+	FLASH          = 0x4000,
 
-      MSK_STORAGE    = 0x6000,
+	MSK_STORAGE    = 0x6000,
 };
 
 enum {
@@ -99,33 +82,15 @@ enum {
   REQ_EX1_R   = 0x0004,
 	REQ_EX2_R   = 0x0008,
 
-	kReqPrg_R   = 0x0001,
-	kReqCmd_R   = 0x0002,
-  kReqEx1_R   = 0x0004,
-	kReqEx2_R   = 0x0008,
-
 	REQ_PRG_W   = REQ_PRG_R << 4,
 	REQ_CMD_W   = REQ_CMD_R << 4,
 	REQ_EX1_W   = REQ_EX1_R << 4,
 	REQ_EX2_W   = REQ_EX2_R << 4,
 
-	kReqPrg_W   = 0x0001,
-	kReqCmd_W   = 0x0002,
-  kReqEx1_W   = 0x0004,
-	kReqEx2_W   = 0x0008,
-
 	REQ_PRG     = REQ_PRG_W | REQ_PRG_R,
 	REQ_CMD     = REQ_CMD_W | REQ_CMD_R,
 	REQ_EX1     = REQ_EX1_W | REQ_EX1_R,
 	REQ_EX2     = REQ_EX2_W | REQ_EX2_R,
-
-	kReq_PRG     = kReqPrg_W | kReqPrg_R,
-	kReq_CMD     = kReqCmd_W | kReqCmd_R,
-	kReq_EX1     = kReqEx1_W | kReqEx1_R,
-	kReq_EX2     = kReqEx2_W | kReqEx2_R,
-	
-	kReqAdmin    = 0x8000,
-	kReqMsk      = 0x00ff,
 	
 	REQ_ADMIN   = 0x8000,
 
@@ -138,20 +103,16 @@ enum {
 	FMT_HEX4,
 	FMT_HEX8,
 	FMT_DEC,
-
-	kFmtDefault,
-	kFmtHex4,
-	kFmtHex8
 };
 
 /* global defined data types
 ----------------------------------------------------------------------------*/
-typedef char   S8;
+typedef char            S8;
 typedef short           S16;
 typedef unsigned short  U16;
 typedef int             S32;
-typedef float  F32;
-typedef double F64;
+typedef float           F32;
+typedef double          F64;
 
 #ifndef STRBUF_SIZE
 # define STRBUF_SIZE 16
@@ -159,8 +120,8 @@ typedef double F64;
 
 #define HNON (U16)-1
 
-typedef S16 HND;
-typedef char STRBUF[32];
+typedef S16             HND;
+typedef char            STRBUF[32];
 
 typedef struct {
 	uint8_t    val;       /* Wert des Enums */
