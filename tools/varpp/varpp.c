@@ -1028,10 +1028,16 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
 
     fprintf(fp, "  /* %s */\n  ", item->hnd );
     for( int j = 0; j < item->vec_items; j++ ) {
+      ENUM_MBR_DESC *mbr = data->items;
+
       if( j > 0 ) {
         fprintf( fp, ", " );
       }
-      fprintf(fp, "%d", data->def_mbr );
+
+      for( int k = 0; k < data->def_mbr; k++ ) {
+        mbr = mbr->next;
+      }
+      fprintf(fp, "%d", mbr->value );
     }
 
     i++;
