@@ -44,14 +44,28 @@ typedef struct _StringItem {
   UT_hash_handle hh;         /* makes this structure hashable */
 } StringItem;
 
+enum {
+  STRPOOL_DUP_FAIL = -1,
+  STRPOOL_DUP_ALLOW = 1,
+};
+
 typedef struct _StringPool {
   StringItem *Head;
-  int         AllowDuplicate;
+  int         DuplicatePolicy;
   size_t      MaxLen;
 } StringPool;
+
+typedef struct _strpool_iter {
+  StringItem *cur;
+} spool_iter;
 
 void         strpool_Init( StringPool *, int );
 StringItem  *strpool_Add( StringPool *, char const *, void * );
 StringItem  *strpool_Get( StringPool *, char const * );
 
 int          strpool_MaxLen( StringPool * );
+
+void         strpool_iter( spool_iter *, StringPool * );
+int          strpool_next( spool_iter *, StringItem * );
+int          strpool_next2( spool_iter *iter, StringItem **el );
+

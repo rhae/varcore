@@ -90,6 +90,17 @@ static int  vc_chk_vector( VAR_DESC const *, int8_t );
 ----------------------------------------------------------------------------*/
 VC_DATA const *s_vc_data;
 
+char const *s_type_str[] = {
+	"TYPE_INT8",
+	"TYPE_INT16",
+	"TYPE_INT32",
+	"TYPE_INT64",
+	"TYPE_FLOAT",
+	"TYPE_DOUBLE",
+	"TYPE_ENUM",
+	"TYPE_STRING",
+	"TYPE_ACTION"
+};
 
 
 /*** is_vector **************************************************************/
@@ -107,7 +118,7 @@ static inline int is_vector( VAR_DESC const *var ) {
 	return nRet;
 }
 
-/*** acc_alloed *************************************************************/
+/*** acc_allowed *************************************************************/
 /**
  *   Check if requested access is allowed.
  */
@@ -125,6 +136,13 @@ static inline ErrCode acc_allowed( VAR_DESC const *var, int rdwr, U16 req ) {
 		return kErrAccessDenied;
 	}
 	return kErrNone;
+}
+
+static inline char const* type2str( U16 n ) {
+	if( n >= TYPE_LAST ) {
+		return "UNKNOWN";
+	}
+	return s_type_str[n];
 }
 
 /*** vc_init ****************************************************************/
@@ -170,7 +188,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 			break;
 
 		case TYPE_ENUM:
-			data_enum = &s_vc_data->data_enum[var->data_idx];
+			data_enum = &s_vc_data->data_enum[var->data_idx + chan];
 			break;
 
 		default:
@@ -417,6 +435,183 @@ ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	}
 	
 	return ret;
+}
+
+int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
+	#define CHECK_LEN( b, n, l, s ) do { \
+     if( n < 0 || (l+n) > s ) {  \
+			 b[l] = '\0'; \
+			 return l; \
+		 } \
+	} while(0)
+
+
+	VAR_DESC const *var;
+	STRBUF spaces;
+	U16 type;
+	int n;
+	int i;
+	U16 len = 0;
+	char *scpi;
+
+	assert( hnd < s_vc_data->var_cnt );
+
+	memset( spaces, ' ', sizeof(STRBUF));
+
+	var = &s_vc_data->vars[hnd];
+	type = var->type & MSK_TYPE;
+	scpi = var->scpi_idx == HNON ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
+
+	n = snprintf( &buf[len], bufsz - len,
+	  "===========================================\n"
+		"SCPI:               %s\n"
+		"Hnd:                %04X\n"
+		"Data type:          %s (%04X)\n"
+		"Items:              %d\n"
+		"Access:             %04X\n"
+		"Descriptor Idx:     %d\n"
+		"Data Idx:           %d\n"
+		"Data\n"
+		"------------------------------------------\n"
+		,
+		scpi,
+		hnd,
+		type2str(type), var->type,
+		var->vec_items,
+		var->acc_rights,
+		var->descr_idx,
+		var->data_idx
+	);
+
+	CHECK_LEN( buf, n, len, bufsz );
+	len += n;
+
+	switch( type ) {
+		case TYPE_INT16:
+
+		  n = snprintf( &buf[len], bufsz - len, "          val    min    max\n");
+			CHECK_LEN( buf, n, len, bufsz );
+			len += n;
+
+			if( var->vec_items == 1 ) {
+				n = snprintf( &buf[len], bufsz - len, "     ");
+				CHECK_LEN( buf, n, len, bufsz );
+				len += n;
+			}
+
+			for( i = 0; i < var->vec_items; i++ ) {
+				DATA_S16 *d = &s_vc_data->data_s16[var->data_idx + i];
+
+				if( var->vec_items > 1 ) {
+					n = snprintf( &buf[len], bufsz - len, " %3d:", i );
+					CHECK_LEN( buf, n, len, bufsz );
+					len += n;	
+				}
+				n = snprintf( &buf[len], bufsz - len, "  %6hd %6hd %6hd\n", d->def_value, d->min, d->max );
+				CHECK_LEN( buf, n, len, bufsz );
+				len += n;
+			}
+			break;
+
+		case TYPE_INT32:
+
+		  n = snprintf( &buf[len], bufsz - len, "          val    min    max\n");
+			CHECK_LEN( buf, n, len, bufsz );
+			len += n;
+
+			if( var->vec_items == 1 ) {
+				n = snprintf( &buf[len], bufsz - len, "     ");
+				CHECK_LEN( buf, n, len, bufsz );
+				len += n;
+			}
+
+			for( i = 0; i < var->vec_items; i++ ) {
+				DATA_S32 *d = &s_vc_data->data_s32[var->data_idx + i];
+
+				if( var->vec_items > 1 ) {
+					n = snprintf( &buf[len], bufsz - len, " %3d:", i );
+					CHECK_LEN( buf, n, len, bufsz );
+					len += n;	
+				}
+				n = snprintf( &buf[len], bufsz - len, " %6d %6d %6d\n", d->def_value, d->min, d->max );
+				CHECK_LEN( buf, n, len, bufsz );
+				len += n;
+			}
+			break;
+
+		case TYPE_FLOAT:
+#if 0
+			for( i = 0; i < var->vec_items; i++ ) {
+				DATA_S32 *d = &s_vc_data->data_s32[var->data_idx];
+				n = snprintf( &buf[len], bufsz - len, "  %5d %5d %5d", d->def_value, d->min, d->max );
+				if( n < 0 ) {
+					return len;
+				}
+				len += n;
+			}
+#else
+			n = snprintf( &buf[len], bufsz - len, "NOT IMPLEMENTED.\n" );
+			CHECK_LEN( buf, n, len, bufsz );
+			len += n;
+#endif
+			break;
+
+		case TYPE_ENUM:
+			{
+				DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->descr_idx];
+				for( U16 i = 0; i < dscr->cnt; i++ ) {
+					ENUM_MBR const *mbr = (ENUM_MBR const *)&dscr->mbr[i];
+					STRBUF S;
+					int flag = 0;
+					int x;
+
+					vc_as_string( mbr->hnd, VarRead, S, chan, REQ_PRG );
+					x = strlen( S );
+					spaces[11-x] = '\0';
+					n = snprintf( &buf[len], bufsz - len, "%2d:  %s%s %4d", i, S, spaces, mbr->value );
+					spaces[11-x] = ' ';
+					CHECK_LEN( buf, n, len, bufsz );
+					len += n;
+						
+					for( U16 c = 0; c < var->vec_items; c++ ) {
+						U16 idx = var->data_idx + c;
+						DATA_ENUM *d = (DATA_ENUM *)&s_vc_data->data_enum[idx];
+
+						if( *d == mbr->value ) {
+							if( !flag ) {
+								n = snprintf( &buf[len], bufsz - len, " <= [" );
+								flag = 1;
+							}
+							else {
+								n = snprintf( &buf[len], bufsz - len, ", " );
+							}
+							CHECK_LEN( buf, n, len, bufsz );
+							len += n;
+
+							n = snprintf( &buf[len], bufsz - len, "%d", c+1 );
+							CHECK_LEN( buf, n, len, bufsz );
+							len += n;
+						}
+					}
+
+					if( flag ) {
+						n = snprintf( &buf[len], bufsz - len, "]\n" );
+					}
+					else {
+						n = snprintf( &buf[len], bufsz - len, "\n" );
+					}
+					CHECK_LEN( buf, n, len, bufsz );
+					len += n;
+				}
+			}
+			break;
+	}
+
+	n = snprintf( &buf[len], bufsz - len,"===========================================\n" );
+	CHECK_LEN( buf, n, len, bufsz );
+	len += n;
+
+	return len;
 }
 
 /*** vc_chk_vector **********************************************************/

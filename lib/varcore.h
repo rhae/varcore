@@ -157,6 +157,8 @@ typedef double F64;
 # define STRBUF_SIZE 16
 #endif
 
+#define HNON (U16)-1
+
 typedef S16 HND;
 typedef char STRBUF[32];
 
@@ -209,6 +211,7 @@ typedef S16 DATA_ENUM_MBR;
 
 typedef struct _VAR_DESC {
 	HND         hnd;          /* Variablen handle */
+	U16         scpi_idx;
 	U16         type;
 	U16         vec_items;
 	U16         acc_rights;
@@ -273,3 +276,5 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req );
 ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req );
 ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req );
 ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req );
+
+int vc_dump_var( char *, U16, HND, U16 );

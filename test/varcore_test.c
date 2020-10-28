@@ -264,12 +264,13 @@ static void wr16_chan(void)
   CU_ASSERT_EQUAL16( temp[0], -99 );
 
 
+  temp[VEC_LEM-1] = 98;
   ret = vc_as_int16( VAR_TP1, VarWrite, &temp[VEC_LEM-1], VEC_LEM-1, REQ_PRG );
   CU_ASSERT_EQUAL16( ret, kErrNone );
   temp[VEC_LEM-1] = 99;
   ret = vc_as_int16( VAR_TP1, VarRead, &temp[VEC_LEM-1], VEC_LEM-1, REQ_PRG );
   CU_ASSERT_EQUAL16( ret, kErrNone );
-  CU_ASSERT_EQUAL16( temp[VEC_LEM-1], -99 );
+  CU_ASSERT_EQUAL16( temp[VEC_LEM-1], 98 );
 
   ret = vc_as_int16( VAR_TP1, VarWrite, &temp[0], VEC_LEM, REQ_PRG );
   CU_ASSERT_EQUAL16( ret, kErrInvalidChan );
@@ -416,6 +417,7 @@ static void rd_enum(void) {
 
 static void wr_enum(void) {
   S16 LOD;
+  S16 YNU;
   ErrCode ret;
   
   LOD = 1;
@@ -426,11 +428,69 @@ static void wr_enum(void) {
   ret = vc_as_int16( VAR_LOD, VarRead, &LOD, 0, REQ_PRG );
   CU_ASSERT_EQUAL( ret, kErrNone );
   CU_ASSERT_EQUAL( LOD, 1 );
+
+  YNU = 99;
+  ret = vc_as_int16( VAR_YNU, VarRead, &YNU, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( YNU, -2 );
+
+  YNU = -1;
+  ret = vc_as_int16( VAR_YNU, VarWrite, &YNU, 5, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  YNU = 99;
+  ret = vc_as_int16( VAR_YNU, VarRead, &YNU, 5, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( YNU, -1 );
 }
 
 static CU_TestInfo tests_rdwr_enum[] = {
   { "RD ENUM", rd_enum },
   { "WR ENUM", wr_enum },
+	CU_TEST_INFO_NULL,
+};
+
+static void dump(void) {
+
+  char *buf = calloc( 1024, 1 );
+  int n;
+
+  vc_dump_var( buf, 1024, VAR_LOD, 0 );
+  puts( buf );
+
+  vc_dump_var( buf, 1024, VAR_YNU, 0 );
+  puts( buf );
+
+  vc_dump_var( buf, 1024, VAR_TP1, 0 );
+  puts( buf );
+
+  vc_dump_var( buf, 1024, VAR_CO_NODEID, 0 );
+  puts( buf );
+
+  vc_dump_var( buf, 1024, VAR_CUR, 0 );
+  puts( buf );
+
+  // buffer too small. Not filled but closed with '\0'.
+  n = vc_dump_var( buf, 10, VAR_CUR, 0 );
+  CU_ASSERT_EQUAL( n, 0 );
+  CU_ASSERT_EQUAL( strlen(buf), 0 );
+
+  // buffer is partly filled.
+  memset( buf, 'F', 1024 );
+  n = vc_dump_var( buf, 282, VAR_CUR, 0 );
+  CU_ASSERT_EQUAL( n, 270 );
+  CU_ASSERT_EQUAL( strlen(buf), 270 );
+
+  S16 YNU = -1;
+  vc_as_int16( VAR_YNU, VarWrite, &YNU, 0, REQ_PRG );
+  vc_as_int16( VAR_YNU, VarWrite, &YNU, 5, REQ_PRG );
+  vc_dump_var( buf, 1024, VAR_YNU, 0 );
+  puts( buf );
+
+  free(buf);
+}
+
+static CU_TestInfo tests_dump[] = {
+  { "Dump variables", dump },
 	CU_TEST_INFO_NULL,
 };
 
@@ -442,6 +502,7 @@ static CU_SuiteInfo suites[] = {
   { "variable str",  suite_init, suite_clean, NULL, NULL, tests_rdwr_str },
   { "variable const str",  suite_init, suite_clean, NULL, NULL, tests_rd_const_str },
   { "variable enum", suite_init, suite_clean, NULL, NULL, tests_rdwr_enum },
+  { "variable dump", suite_init, suite_clean, NULL, NULL, tests_dump },
 	CU_SUITE_INFO_NULL,
 };
 
