@@ -1173,7 +1173,7 @@ enum {
                ""
                "  g_descr_int16,\n"
                "  %zu,\n"
-                "  g_data_int16,\n"
+               "  g_data_int16,\n"
                "  %zu,\n"
                "  g_descr_int32,\n"
                "  %zu,\n"
