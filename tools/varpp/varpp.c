@@ -1169,24 +1169,24 @@ enum {
 
   fputs( "VC_DATA g_var_data = {\n", fp );
   fprintf( fp, "  g_vars,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                ""
                "  g_descr_int16,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                 "  g_data_int16,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_descr_int32,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_data_int32,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_data_string,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_data_const_string,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_data_enum,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_enum_mbr,\n"
-               "  %ld\n"
+               "  %zu\n"
                "};\n",
                cnt_total,
                cnt_descr[TYPE_INT16],
