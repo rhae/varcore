@@ -159,7 +159,6 @@ int  read_csv_file( DataItem **, char * );
 int  save_inc_file( DataItem *, char * );
 int  save_var_file( DataItem *, char * );
 int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int );
-int  save_data_float( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_string( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type );
@@ -210,7 +209,7 @@ typedef struct {
 } VERSION;
 
 static VERSION s_Version = {
-  1, 1, 0,
+  1, 2, 0,
   "Variable preprocessor",
   "(C) R. Haertel",
   "2020"
@@ -681,8 +680,11 @@ int save_var_file( DataItem *head, char *szFilename )
   save_data_int( fp, head, "g_descr_int32", TYPE_INT32, 1 );
   save_data_int( fp, head, "g_data_int32", TYPE_INT32, 0 );
 
-  save_data_float( fp, head, "g_data_float", TYPE_FLOAT );
-  save_data_float( fp, head, "g_data_double", TYPE_DOUBLE );
+  save_data_int( fp, head, "g_descr_float", TYPE_FLOAT, 1 );
+  save_data_int( fp, head, "g_data_float", TYPE_FLOAT, 0 );
+
+  save_data_int( fp, head, "g_descr_double", TYPE_DOUBLE, 1 );
+  save_data_int( fp, head, "g_data_double", TYPE_DOUBLE, 0 );
 
   save_data_string( fp, head, "g_data_string", TYPE_STRING );
   save_data_const_string( fp, head, "g_data_const_string", TYPE_STRING );
@@ -701,7 +703,7 @@ int save_var_file( DataItem *head, char *szFilename )
 
 /*** save_data_int ***************************************************/
 /**
- *   Save data or descriptor of integer variabes.
+ *   Save data or descriptor of integeral (int16,int32,float/double) variabes.
  *
  *   Writes the data of the variables to the file pointer.
  *   If descr_flag is set, then the content of the data items
@@ -738,6 +740,16 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
       zfmt = "  { %d, %d, %d }";
       break;
 
+    case TYPE_FLOAT:
+      ztype = "DATA_F32";
+      zfmt = "  { %f, %f, %f }";
+      break;
+
+    case TYPE_DOUBLE:
+      ztype = "DATA_F64";
+      zfmt = "  { %g, %g, %g }";
+      break;
+
     default:
       log_printf( LogErr, "%s:%d Type: %d not supported", __FILE__, __LINE__, type );
       return -1;
@@ -749,13 +761,14 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
   }
   else
   {
-      fprintf( fp, "%s %s[", ztype, name );
+    fprintf( fp, "%s %s[", ztype, name );
   }
 
   LL_FOREACH( head, item ) {
     int len;
     char *spaces;
-    PP_DATA_INT *data = &item->data.data_int;
+    PP_DATA_INT    *data_int    = &item->data.data_int;
+    PP_DATA_DOUBLE *data_double = &item->data.data_double;
 
     if((item->type & TYPE_MASK) != type ) {
       continue;
@@ -781,7 +794,17 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
         fputs( spaces, fp );
       }
 
-      fprintf( fp, zfmt, data->def_value, data->min, data->max );
+      switch( type ) {
+        case TYPE_INT16:
+        case TYPE_INT32:
+          fprintf( fp, zfmt, data_int->def_value, data_int->min, data_int->max );
+          break;
+
+        case TYPE_FLOAT:
+        case TYPE_DOUBLE:
+          fprintf( fp, zfmt, data_double->def_value, data_double->min, data_double->max );
+          break;
+      }
     }
 
     i++;
@@ -789,81 +812,18 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
 
   if( init_data ) {
     if( 1 == i ) {
-      // No int16/int32 item was declared.
+      // No item was declared.
       // Emit a 0 value. This prohibts a warning from the compiler.
-      fputs( "  { 0 }", fp );
+      fputs( "  { 0, 0, 0 }", fp );
     }
-
     fputs( "\n};\n\n", fp );
   }
   else {
-    fprintf( fp, "%d];\n", data_cnt );
+    // No item was declared
+    // Emit an array of size 1. This prohibits a warning from the compiler.
+    fprintf( fp, "%d];\n", (0 == data_cnt) ? 1 : data_cnt );
   }
   
-
-  return 0;
-}
-
-int  save_data_float( FILE *fp, DataItem *head, char const *name, int type ) {
-  int i = 1;
-  char const *ztype;
-  char const *zfmt;
-  DataItem *item;
-
-  switch( type ) {
-    case TYPE_FLOAT:
-      ztype = "DATA_F32";
-      zfmt = "  { %f, %f, %f }";
-      break;
-
-    case TYPE_DOUBLE:
-      ztype = "DATA_F64";
-      zfmt = "  { %g, %g, %g }";
-      break;
-
-    default:
-      log_printf( LogErr, "FLOAT: Type: %d not supported", type );
-      return -1;
-  }
-
-  fprintf( fp, "%s %s[] = {\n", ztype, name );
-  LL_FOREACH( head, item ) {
-    int len;
-    char *spaces;
-    PP_DATA_DOUBLE *data = &item->data.data_double;
-
-    if((item->type & TYPE_MASK) != type ) {
-      continue;
-    }
-
-    len = strlen( item->hnd );
-    spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
-
-    if( i != 1 ) {
-      fputs( ",\n", fp );
-    }
-
-    fprintf(fp, "  /* %s%s */", item->hnd, spaces );
-    for( int j = 0; j < item->vec_items; j++ ) {
-      if( j > 0 ) {
-        fputs( ",\n", fp );
-        spaces = srepeat( ' ', 10 + s_Stats.max_var_hnd_len );
-        fputs( spaces, fp );
-      }
-
-      fprintf( fp, zfmt, data->def_value, data->min, data->max );
-    }
-
-    i++;
-  }
-
-  if( 1 == i ) {
-    // No float/double item was declared.
-    // Emit a 0 value. This prohibts a warning from the compiler.
-    fputs( "  { 0 }", fp );
-  }
-
-  fputs( "\n};\n\n", fp );
 
   return 0;
 }
@@ -1184,7 +1144,15 @@ enum {
                "  g_data_enum,\n"
                "  %zu,\n"
                "  g_enum_mbr,\n"
-               "  %zu\n"
+               "  %zu,\n"
+               "  g_descr_float,\n"
+               "  %zu,\n"
+               "  g_data_float,\n"
+               "  %zu,\n"
+               "  g_descr_double,\n"
+               "  %zu,\n"
+               "  g_data_double,\n"
+               "  %zu,\n"
                "};\n",
                cnt_total,
                cnt_descr[TYPE_INT16],
@@ -1196,7 +1164,13 @@ enum {
                cnt_data[kTypeConstString],
 
                cnt_data[TYPE_ENUM],
-               cnt_descr[kTypeEnumMbr]
+               cnt_descr[kTypeEnumMbr],
+
+               cnt_descr[TYPE_FLOAT],
+               cnt_data[TYPE_FLOAT],
+
+               cnt_descr[TYPE_DOUBLE],
+               cnt_data[TYPE_DOUBLE]
          );
     return 0;
 }

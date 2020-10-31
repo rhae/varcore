@@ -211,16 +211,18 @@ typedef struct _VC_DATA {
 	S16 const       *data_mbr;
 	HND              mbr_cnt;
 
+	DATA_F32 const  *descr_f32;
+	HND              descr_f32_cnt;
+
+	DATA_F32        *data_f32;
+	HND              data_f32_cnt;
+
+	DATA_F64 const  *descr_f64;
+	HND              descr_f64_cnt;
+
+	DATA_F64        *data_f64;
+	HND              data_f64_cnt;
 #if 0
-	DATA_F32    *descr_f32;
-	HND          descr_f32_cnt;
-
-	DATA_F32    *data_f32;
-	HND          data_f32_cnt;
-
-	DATA_F64    *data_f64;
-	HND          data_f64_cnt;
-
 	DATA_STRING *descr_str;
 	HND          descr_str_cnt;
 
