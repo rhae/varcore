@@ -76,6 +76,7 @@ typedef struct {
   Section section;
   char const *prefix;
   size_t prefix_len;
+  int init_data;
 } Config;
 
 typedef struct _DATA_INT {
@@ -157,7 +158,7 @@ static int parse_enum( DataItem *, size_t, CSV_BUF* );
 int  read_csv_file( DataItem **, char * );
 int  save_inc_file( DataItem *, char * );
 int  save_var_file( DataItem *, char * );
-int  save_data_int( FILE *fp, DataItem *head, char const *name, int type );
+int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int );
 int  save_data_float( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_string( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int type );
@@ -165,8 +166,6 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type );
 int  serialize_enum( char *, size_t, PP_DATA_ENUM * );
 int  save_vc_def( FILE *fp, DataItem *head );
-
-int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type );
 
 void handle_pragma( char const*, LOC const* );
 
@@ -225,6 +224,12 @@ static void puts_version() {
    s_Version.Date );
 }
 
+static void print_cfg( Config *C ) {
+  log_printf(LogDebug, "Pragmas:");
+  log_printf(LogDebug, "  prefix     : %s", C->prefix );
+  log_printf(LogDebug, "  init_data  : %s", C->init_data ? "on" : "off" );
+}
+
 /**
  *
  *
@@ -251,8 +256,10 @@ int main( int argc, char **argv )
   /* initializes s_Cfg */
   handle_pragma( "#pragma section var", 0 );
   handle_pragma( "#pragma prefix VAR_", 0 );
+  handle_pragma( "#pragma init_data off", 0 );
 
   puts_version();
+  print_cfg( &s_Cfg );
 
   sprintf( def, "#define VARPP_MAJOR       %d", s_Version.Major );
   defs_add( def, 0 );
@@ -668,11 +675,11 @@ int save_var_file( DataItem *head, char *szFilename )
 
   fputs( "\n};\n\n", fp );
 
-  save_descr_int( fp, head, "g_descr_int16", TYPE_INT16 );
-  save_data_int( fp, head, "g_data_int16", TYPE_INT16 );
+  save_data_int( fp, head, "g_descr_int16", TYPE_INT16, 1 );
+  save_data_int( fp, head, "g_data_int16", TYPE_INT16, 0 );
 
-  save_descr_int( fp, head, "g_descr_int32", TYPE_INT32 );
-  save_data_int( fp, head, "g_data_int32", TYPE_INT32 );
+  save_data_int( fp, head, "g_descr_int32", TYPE_INT32, 1 );
+  save_data_int( fp, head, "g_data_int32", TYPE_INT32, 0 );
 
   save_data_float( fp, head, "g_data_float", TYPE_FLOAT );
   save_data_float( fp, head, "g_data_double", TYPE_DOUBLE );
@@ -692,14 +699,35 @@ int save_var_file( DataItem *head, char *szFilename )
   return nRet;
 }
 
-int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
+/*** save_data_int ***************************************************/
+/**
+ *   Save data or descriptor of integer variabes.
+ *
+ *   Writes the data of the variables to the file pointer.
+ *   If descr_flag is set, then the content of the data items
+ *   is always written to the file. When descr_flag is unset (= 0)
+ *   then the #pragma init_data specifies if the data content
+ *   is written to the file. This is useful to reduce flash space
+ *   in embedded devices. The #pragma init_data on is useful for debugging.
+ *
+ *   @param fp         file pointer
+ *   @param head       poiter to head of data items (aka variables)
+ *   @param name       variable name
+ *   @param type       data type of the data items
+ *   @param descr_flag this flag tells if a descriptor or the data
+ *                       of the variables show be written to fp
+ */
+
+int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int descr_flag ) {
   int i = 1;
+  int init_data;
+  int data_cnt = 0;
   char const *ztype;
   char const *zfmt;
+  char const *zmod = (descr_flag) ? "const" : "";
   DataItem *item;
 
   switch( type ) {
-
     case TYPE_INT16:
       ztype = "DATA_S16";
       zfmt = "  { %d, %d, %d }";
@@ -711,11 +739,19 @@ int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
       break;
 
     default:
-      log_printf( LogErr, "INT: Type: %d not supported", type );
+      log_printf( LogErr, "%s:%d Type: %d not supported", __FILE__, __LINE__, type );
       return -1;
   }
 
-  fprintf( fp, "%s const %s[] = {\n", ztype, name );
+  init_data = descr_flag || s_Cfg.init_data;
+  if( init_data ) {
+    fprintf( fp, "%s %s %s[] = {\n", ztype, zmod, name );
+  }
+  else
+  {
+      fprintf( fp, "%s %s[", ztype, name );
+  }
+
   LL_FOREACH( head, item ) {
     int len;
     char *spaces;
@@ -725,52 +761,8 @@ int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
       continue;
     }
 
-    len = strlen( item->hnd );
-    spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
-
-    if( i != 1 ) {
-      fputs( ",\n", fp );
-    }
-
-    fprintf(fp, "  /* %s%s */", item->hnd, spaces );
-    fprintf( fp, zfmt, data->def_value, data->min, data->max );
-
-    i++;
-  }
-  fputs( "\n};\n\n", fp );
-
-  return 0;
-}
-
-int  save_data_int( FILE *fp, DataItem *head, char const *name, int type ) {
-  int i = 1;
-  char const *ztype;
-  char const *zfmt;
-  DataItem *item;
-
-  switch( type ) {
-    case TYPE_INT16:
-      ztype = "DATA_S16";
-      zfmt = "  { %d, %d, %d }";
-      break;
-
-    case TYPE_INT32:
-      ztype = "DATA_S32";
-      zfmt = "  { %d, %d, %d }";
-      break;
-
-    default:
-      log_printf( LogErr, "Type: %d not supported", type );
-      return -1;
-  }
-
-  fprintf( fp, "%s %s[] = {\n", ztype, name );
-  LL_FOREACH( head, item ) {
-    int len;
-    char *spaces;
-    PP_DATA_INT *data = &item->data.data_int;
-
-    if((item->type & TYPE_MASK) != type ) {
+    if( !init_data ) {
+      data_cnt += item->vec_items;
       continue;
     }
 
@@ -795,13 +787,19 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type ) {
     i++;
   }
 
-  if( 1 == i ) {
-    // No int16/int32 item was declared.
-    // Emit a 0 value. This prohibts a warning from the compiler.
-    fputs( "  { 0 }", fp );
-  }
+  if( init_data ) {
+    if( 1 == i ) {
+      // No int16/int32 item was declared.
+      // Emit a 0 value. This prohibts a warning from the compiler.
+      fputs( "  { 0 }", fp );
+    }
 
-  fputs( "\n};\n\n", fp );
+    fputs( "\n};\n\n", fp );
+  }
+  else {
+    fprintf( fp, "%d];\n", data_cnt );
+  }
+  
 
   return 0;
 }
@@ -1588,8 +1586,8 @@ static int find_opt( char const *p, char const **opt_list, char **endp, int *idx
 }
 
 void handle_pragma( char const *line, LOC const *loc ) {
-  enum { kSection, kPrefix };
-  static char const* Pragmas[] = { "section", "prefix", NULL };
+  enum { kSection, kPrefix, kInitData };
+  static char const* Pragmas[] = { "section", "prefix", "init_data", NULL };
 
   char *endp = NULL;
   int idx = -1;
@@ -1617,8 +1615,11 @@ void handle_pragma( char const *line, LOC const *loc ) {
       s_Cfg.prefix_len = strlen( s_Cfg.prefix );
       break;
 
+    case kInitData:
+      s_Cfg.init_data = (0 == strcmp( endp, "on")) ? 1 : 0;
+      break;
+
     default:
       UNHANDLED_CASE( idx );
-
   }
 }
