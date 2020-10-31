@@ -65,7 +65,7 @@
     CU_assertImplementation(((actual) == (expected)), __LINE__, condition, __FILE__, "", CU_FALSE); \
   } while(0)
 
-  #define CU_ASSERT_EQUAL32(actual, expected) \
+#define CU_ASSERT_EQUAL32(actual, expected) \
   do { \
     char condition[256]; \
     sprintf( condition, "CU_ASSERT_EQUAL32( " xstr(actual) " = %d/%x, %d )", actual, actual, expected ) ;\
@@ -402,11 +402,13 @@ static CU_TestInfo tests_rd_const_str[] = {
 
 static void rd_enum(void) {
   S16 LOD;
+  S16 XON = -1;
   ErrCode ret;
   
-  ret = vc_as_int16( VAR_LOD, VarRead, &LOD, 0, REQ_PRG );
+  /* Important: Use a enum that has a initial value != 0 */
+  ret = vc_as_int16( VAR_XON, VarRead, &XON, 0, REQ_PRG );
   CU_ASSERT_EQUAL( ret, kErrNone );
-  CU_ASSERT_EQUAL( LOD, 0 );
+  CU_ASSERT_EQUAL( XON, 1 );
 
   LOD = -1;
   ret = vc_as_int16( VAR_LOD, VarRead, &LOD, 10, REQ_PRG );
