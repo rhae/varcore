@@ -1,7 +1,6 @@
 
 
 all: tools lib test
-	$(MAKE) -C test tests
 
 .PHONY: lib
 lib:
