@@ -181,8 +181,8 @@ typedef struct _VAR_DESC {
 } VAR_DESC;
 
 typedef struct _VC_DATA {
-	VAR_DESC    *vars;
-	HND          var_cnt;
+	VAR_DESC const   *vars;
+	HND const         var_cnt;
 
 	DATA_S16 const  *descr_s16;
 	HND              descr_s16_cnt;

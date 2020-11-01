@@ -563,7 +563,7 @@ int save_var_file( DataItem *head, char *szFilename )
 
   FILE *fp = fopen( szFilename, "w+");
 
-  fputs( "VAR_DESC g_vars[] = {\n", fp );
+  fputs( "VAR_DESC const g_vars[] = {\n", fp );
 
   strpool_iter( &iter, &s_StrPools[spScpi] );
   for(;;) {
