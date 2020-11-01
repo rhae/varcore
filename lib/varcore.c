@@ -79,6 +79,10 @@
 /* list of local defined functions
 ----------------------------------------------------------------------------*/
 static int  vc_chk_vector( VAR_DESC const *, int8_t );
+static int  vc_init_s16( VAR_DESC const *);
+static int  vc_init_s32( VAR_DESC const *);
+static int  vc_init_f32( VAR_DESC const *);
+static int  vc_init_f64( VAR_DESC const *);
 
 /* external variables
 ----------------------------------------------------------------------------*/
@@ -150,17 +154,57 @@ static inline char const* type2str( U16 n ) {
  *
  *
  */
-int vc_init( VC_DATA const *vc )
-{
+ErrCode vc_init( VC_DATA const *vc ) {
+
 	s_vc_data = vc;
+	vc_reset();
 	
-	return 0;
+	return kErrNone;
+}
+
+ErrCode vc_reset() {
+
+	assert( s_vc_data );
+	HND     var_cnt = s_vc_data->var_cnt;
+	ErrCode E       = kErrNone;
+
+	for( HND hVar = 0; E == kErrNone && hVar < var_cnt; hVar++ ) {
+		VAR_DESC const *var  = &s_vc_data->vars[hVar];
+		U16             type = var->type & TYPE_MASK;
+		
+		switch( type ) {
+			case TYPE_INT16:
+				E = vc_init_s16( var );
+				break;
+
+			case TYPE_INT32:
+				E = vc_init_s32( var );
+				break;
+
+			case TYPE_ENUM:
+				break;
+
+			case TYPE_FLOAT:
+				E = vc_init_f32( var );
+				break;
+
+			case TYPE_DOUBLE:
+				E = vc_init_f64( var );
+				break;
+
+			case TYPE_STRING:
+				break;
+		}
+	}
+
+	return E;
 }
 
 int vc_get_access( HND hnd, int chan ) {
 	VAR_DESC const *var;
 	UNUSED_PARAM( chan );
 
+	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = &s_vc_data->vars[hnd];
@@ -178,6 +222,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	DATA_S16 *data_s16 = NULL;
 	DATA_ENUM *data_enum = NULL;
 
+	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = &s_vc_data->vars[hnd];
@@ -200,7 +245,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 		return ret;
 	}
 
-  if( chan > 0) {
+  	if( chan > 0 ) {
 		ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
@@ -228,6 +273,7 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 	VAR_DESC const *var;
 	DATA_S32 *data;
 
+	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = &s_vc_data->vars[hnd];
@@ -271,6 +317,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 	U16 type;
 	U16 flags;
 	
+	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = &s_vc_data->vars[hnd];
@@ -404,14 +451,15 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	ErrCode ret = kErrNone;
 	VAR_DESC const *var;
-	DATA_S32 *data;
+	DATA_F32 *data;
 
+	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = &s_vc_data->vars[hnd];
-	data = &s_vc_data->data_s32[var->data_idx + chan];
+	data = &s_vc_data->data_f32[var->data_idx + chan];
 
-	if((var->type & TYPE_MASK) != TYPE_INT32 ) {
+	if((var->type & TYPE_MASK) != TYPE_FLOAT ) {
 		return kErrInvalidType;
 	}
 
@@ -420,7 +468,7 @@ ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 		return ret;
 	}
 
-  if( chan > 0) {
+  	if( chan > 0 ) {
 		ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
@@ -428,10 +476,10 @@ ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	}
 
 	if( rdwr == VarRead ) {
-		*(S32 *)val = data->def_value;
+		*(F32 *)val = data->def_value;
 	}
 	else {
-		data->def_value = *(S32*)val;
+		data->def_value = *(F32*)val;
 	}
 	
 	return ret;
@@ -631,6 +679,70 @@ static ErrCode vc_chk_vector( VAR_DESC const *var, int8_t chan )
 		}
 	}
 	return ret;
+}
+
+/*** vc_init_s16 **********************************************************/
+/**
+ *	 Copy data from the descriptor into the data location of \b var
+ *
+ *   @param var   Variable handle
+ *
+ *   @return kErrNone, when done.
+ */
+static ErrCode vc_init_s16( VAR_DESC const *var ) {
+	DATA_S16 const *descr = &s_vc_data->descr_s16[var->data_idx];
+	DATA_S16       *data  = &s_vc_data->data_s16[var->data_idx];
+
+	memcpy( data, descr, sizeof(DATA_S16) * var->vec_items );
+	return kErrNone;
+}
+
+/*** vc_init_s32 **********************************************************/
+/**
+ *	 Copy data from the descriptor into the data location of \b var
+ *
+ *   @param var   Variable handle
+ *
+ *   @return kErrNone, when done.
+ */
+static ErrCode vc_init_s32( VAR_DESC const *var ) {
+	DATA_S32 const *descr = &s_vc_data->descr_s32[var->data_idx];
+	DATA_S32       *data  = &s_vc_data->data_s32[var->data_idx];
+
+	memcpy( data, descr, sizeof(DATA_S32) * var->vec_items );
+	return kErrNone;
+}
+
+/*** vc_init_f32 **********************************************************/
+/**
+ *	 Copy data from the descriptor into the data location of \b var
+ *
+ *   @param var   Variable handle
+ *
+ *   @return kErrNone, when done.
+ */
+static ErrCode vc_init_f32( VAR_DESC const *var ) {
+	DATA_F32 const *descr = &s_vc_data->descr_f32[var->data_idx];
+	DATA_F32       *data  = &s_vc_data->data_f32[var->data_idx];
+
+	memcpy( data, descr, sizeof(DATA_F32) * var->vec_items );
+	return kErrNone;
+}
+
+/*** vc_init_f64 **********************************************************/
+/**
+ *	 Copy data from the descriptor into the data location of \b var
+ *
+ *   @param var   Variable handle
+ *
+ *   @return kErrNone, when done.
+ */
+static ErrCode vc_init_f64( VAR_DESC const *var ) {
+	DATA_F64 const *descr = &s_vc_data->descr_f64[var->data_idx];
+	DATA_F64       *data  = &s_vc_data->data_f64[var->data_idx];
+
+	memcpy( data, descr, sizeof(DATA_F64) * var->vec_items );
+	return kErrNone;
 }
 
 /*______________________________________________________________________EOF_*/
