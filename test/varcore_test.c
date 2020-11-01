@@ -334,6 +334,66 @@ static CU_TestInfo tests_rdwr16[] = {
 	CU_TEST_INFO_NULL,
 };
 
+/*** float (f32) tests ********************************************************/
+
+static void rd_f32(void)
+{
+  F32 NCUR = -1;
+  ErrCode E = kErrGeneric;
+
+  E = vc_as_float( VAR_CUR_NMAX, VarRead, &NCUR, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( E, kErrNone );
+  CU_ASSERT_DOUBLE_EQUAL( NCUR, -500, .001 );
+
+  NCUR = -1;
+  E = vc_as_float( VAR_CUR_NMAX, VarRead, &NCUR, VEC_LEM, REQ_PRG );
+  CU_ASSERT_EQUAL( E, kErrInvalidChan );
+  CU_ASSERT_DOUBLE_EQUAL( NCUR, -1, .001 );
+}
+
+static void wr_f32(void)
+{
+  F32 NCUR;
+  ErrCode E = kErrGeneric;
+
+  NCUR = -10;
+  E = vc_as_float( VAR_CUR_NMAX, VarWrite, &NCUR, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( E, kErrNone );
+
+  NCUR = -1;
+  E = vc_as_float( VAR_CUR_NMAX, VarRead, &NCUR, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( E, kErrNone );
+  CU_ASSERT_DOUBLE_EQUAL( NCUR, -10, .001 );
+  
+  NCUR = -1;
+  E = vc_as_float( VAR_CUR_NMAX, VarWrite, &NCUR, VEC_LEM, REQ_PRG );
+  CU_ASSERT_EQUAL( E, kErrInvalidChan );
+  CU_ASSERT_DOUBLE_EQUAL( NCUR, -1, .001 );
+}
+
+static void as_str_f32(void)
+{
+  STRBUF S;
+  F32 NCUR;
+  ErrCode E = kErrGeneric;
+
+  strcpy( S, "10.0" );
+  E = vc_as_string( VAR_CUR_NMAX, VarWrite, S, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( E, kErrNone );
+
+  NCUR = -1;
+  E = vc_as_float( VAR_CUR_NMAX, VarRead, &NCUR, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( E, kErrNone );
+  CU_ASSERT_DOUBLE_EQUAL( NCUR, 10, .001 );
+}
+
+static CU_TestInfo tests_rdwr_f32[] = {
+  { "RD", rd_f32 },
+  { "WR", wr_f32 },
+  { "as string", as_str_f32 },
+	CU_TEST_INFO_NULL,
+};
+
 /*** volatile string tests **************************************************/
 
 static void rd_str(void) {
@@ -451,6 +511,8 @@ static CU_TestInfo tests_rdwr_enum[] = {
 	CU_TEST_INFO_NULL,
 };
 
+/*** dump tests **********************************************************/
+
 static void dump(void) {
 
   char *buf = calloc( 1024, 1 );
@@ -501,6 +563,7 @@ static CU_TestInfo tests_dump[] = {
 static CU_SuiteInfo suites[] = {
   { "variable S32",  suite_init, suite_clean, NULL, NULL, tests_rdwr32 },
   { "variable S16",  suite_init, suite_clean, NULL, NULL, tests_rdwr16 },
+  { "variable F32",  suite_init, suite_clean, NULL, NULL, tests_rdwr_f32 },
   { "variable str",  suite_init, suite_clean, NULL, NULL, tests_rdwr_str },
   { "variable const str",  suite_init, suite_clean, NULL, NULL, tests_rd_const_str },
   { "variable enum", suite_init, suite_clean, NULL, NULL, tests_rdwr_enum },
