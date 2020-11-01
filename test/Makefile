@@ -10,6 +10,7 @@ AR      := ar
 INCLUDE := -Icunit/CUnit -I../lib
 LIBS    := -L cunit/local-build/CUnit -lcunit -L../lib -lvarcore
 
+#CFLAGS  := -g -W -Wall -pedantic $(INCLUDE) -lgcc_s -lubsan -fsanitize=undefined
 CFLAGS  := -g -W -Wall -pedantic $(INCLUDE)
 
 all: $(target)
