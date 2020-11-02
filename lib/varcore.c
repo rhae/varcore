@@ -56,11 +56,15 @@
 /* constant definitions
 ----------------------------------------------------------------------------*/
 #ifndef UNUSED_PARAM
-#  define UNUSED_PARAM(x) (void)(x)
+# define UNUSED_PARAM(x) (void)(x)
 #endif
 
 #ifndef LOG_UNH_CASE
-#  define LOG_UNH_CASE(x)   printf( "[%s:%d] Unhandled case %d", __FILE__, __LINE__, x )
+# define LOG_UNH_CASE(x)   printf( "[%s:%d] Unhandled case %d\n", __FILE__, __LINE__, x )
+#endif
+
+#ifndef LOG_NOT_IMPL
+# define LOG_NOT_IMPL(x)   printf( "[%s:%d] %s not implemented\n", __FILE__, __LINE__, x )
 #endif
 
 #ifndef countof
@@ -83,6 +87,7 @@ static int  vc_init_s16( VAR_DESC const *);
 static int  vc_init_s32( VAR_DESC const *);
 static int  vc_init_f32( VAR_DESC const *);
 static int  vc_init_f64( VAR_DESC const *);
+static int  vc_init_enum( VAR_DESC const *);
 
 /* external variables
 ----------------------------------------------------------------------------*/
@@ -182,6 +187,7 @@ ErrCode vc_reset() {
 				break;
 
 			case TYPE_ENUM:
+				E = vc_init_enum( var );
 				break;
 
 			case TYPE_FLOAT:
@@ -433,6 +439,10 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 			}
 		}
 		break;
+
+		case TYPE_ENUM:
+			LOG_NOT_IMPL( "TYPE_ENUM" );
+			break;
 
 		default:
 			LOG_UNH_CASE( type );
@@ -742,6 +752,25 @@ static ErrCode vc_init_f64( VAR_DESC const *var ) {
 	DATA_F64       *data  = &s_vc_data->data_f64[var->data_idx];
 
 	memcpy( data, descr, sizeof(DATA_F64) * var->vec_items );
+	return kErrNone;
+}
+
+/*** vc_init_enum **********************************************************/
+/**
+ *	 Copy data from the descriptor into the data location of \b var
+ *
+ *   @param var   Variable handle
+ *
+ *   @return kErrNone, when done.
+ */
+static ErrCode vc_init_enum( VAR_DESC const *var ) {
+	DESCR_ENUM const *descr = (DESCR_ENUM*)&s_vc_data->data_mbr[var->descr_idx];
+	S16              *data  = &s_vc_data->data_enum[var->data_idx];
+    
+	for( int i = 0; i < var->vec_items; i++ ) {
+		*data = descr->def_value;
+		data++;
+	}
 	return kErrNone;
 }
 

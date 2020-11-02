@@ -161,6 +161,7 @@ typedef struct _ENUM_MBR {
 } ENUM_MBR;
 
 typedef struct _DESCR_ENUM {
+	S16 def_value;
 	U16 cnt;
 	ENUM_MBR mbr[];
 } DESCR_ENUM;

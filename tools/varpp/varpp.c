@@ -661,7 +661,7 @@ int save_var_file( DataItem *head, char *szFilename )
 
       case TYPE_ENUM:
         if( incr_descr ) {
-          descr_cnt[type] += 3* item->data.data_enum.cnt +1;
+          descr_cnt[type] += 3* item->data.data_enum.cnt +2;
         }
         data_cnt[type] += item->vec_items;
         break;
@@ -669,7 +669,6 @@ int save_var_file( DataItem *head, char *szFilename )
       default:
         UNHANDLED_CASE( type );
     }
-    
   }
 
   fputs( "\n};\n\n", fp );
@@ -956,11 +955,22 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
   return 0;  
 }
 
+int enum_get_def( PP_DATA_ENUM const *data ) {
+  ENUM_MBR_DESC *mbr = data->items;
+
+  for( int k = 0; k < data->def_mbr; k++ ) {
+    mbr = mbr->next;
+  }
+  return mbr->value;
+}
+
 int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
 {
   int i = 1;
   char const *ztype;
   DataItem *item;
+  int init_data = s_Cfg.init_data;
+  int data_cnt = 0;
 
   switch( type ) {
     case TYPE_ENUM:
@@ -972,11 +982,22 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
       return -1;
   }
 
-  fprintf( fp, "%s %s[] = {\n", ztype, name );
+  if( init_data ) {
+    fprintf( fp, "%s %s[] = {\n", ztype, name );
+  }
+  else {
+    fprintf( fp, "%s %s[", ztype, name );
+  }
+
   LL_FOREACH( head, item ) {
     PP_DATA_ENUM *data = &item->data.data_enum;
 
     if((item->type & TYPE_MASK) != type ) {
+      continue;
+    }
+
+    data_cnt += item->vec_items;
+    if( !init_data ) {
       continue;
     }
 
@@ -986,21 +1007,24 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
 
     fprintf(fp, "  /* %s */\n  ", item->hnd );
     for( int j = 0; j < item->vec_items; j++ ) {
-      ENUM_MBR_DESC *mbr = data->items;
+      int enm_def = enum_get_def( data );
 
       if( j > 0 ) {
         fprintf( fp, ", " );
       }
 
-      for( int k = 0; k < data->def_mbr; k++ ) {
-        mbr = mbr->next;
-      }
-      fprintf(fp, "%d", mbr->value );
+      fprintf(fp, "%d", enm_def );
     }
 
     i++;
   }
-  fputs( "\n};\n\n", fp );
+  
+  if( init_data ) {
+    fputs( "\n};\n\n", fp );
+  }
+  else {
+    fprintf( fp, "%d];\n", data_cnt );
+  }
 
   return 0;
 }
@@ -1056,10 +1080,11 @@ int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type )
       size_t len = strlen( mbr->hnd );
       char *spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
       if( j == 0 ) {
-        fprintf(fp, "%d, ", data->cnt );
+        int def_val = enum_get_def( data );
+        fprintf(fp, "%d, %d,\n    ", def_val, data->cnt );
       }
       else {
-        fprintf(fp, ",\n     " );  
+        fprintf(fp, ",\n    " );  
       }
       fprintf(fp, "%s,%s % 4d, % 4d", mbr->hnd, spaces, mbr->value, -1 );
       mbr = mbr->next;
@@ -1478,16 +1503,17 @@ int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
   for( int i = 0; i < enm->cnt; i++ ) {
     int n;
     
-    #if 0
-    // Don't mark the default value.
-    // This would lead to different enum mbr descriptors
-    // which is not necessary, since the default value
-    // is stored in the data.
+    // Include the default value into the descriptor.
+    // This leads to different descriptors for
+    // enums that are mostly identical and where some
+    // space could be saved.
+    // But excluding the default value would require
+    // to store the default values somewhere else which
+    // I don't want to. The overhead is - I hope - neglegible.
     if( mbr->value == enm->def_mbr ) {
       *s = ':';
       s++;
     }
-    #endif
 
     n = snprintf( s, rest, "%s=%d", mbr->hnd, mbr->value );
     if( n <= 0 ) {

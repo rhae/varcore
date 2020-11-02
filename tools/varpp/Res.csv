@@ -3,6 +3,7 @@
 ;;;"Admin";;;;;;;
 "#pragma section var";;;;;;;;;;
 "#pragma prefix VAR_";;;;;;;;;;
+#pragma init_data on
 ;;;;;;;;;;
 "#define VEC_LEM 8";;;;;;;;;;
 "#define VEC_ETH 2";;;;;;;;;;
