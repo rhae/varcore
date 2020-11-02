@@ -79,7 +79,7 @@ enum {
 enum {
 	REQ_PRG_R   = 0x0001,
 	REQ_CMD_R   = 0x0002,
-  REQ_EX1_R   = 0x0004,
+    REQ_EX1_R   = 0x0004,
 	REQ_EX2_R   = 0x0008,
 
 	REQ_PRG_W   = REQ_PRG_R << 4,
