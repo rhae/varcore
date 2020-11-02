@@ -414,7 +414,37 @@ static void rd_str(void) {
 }
 
 static void wr_str(void) {
+  enum {
+    BigBuf = sizeof(STRBUF)*2
+  };
+  ErrCode ret;
+  STRBUF S;
+  char T[BigBuf];
+  memset( T, 'S', BigBuf );
 
+  /* write string */
+  ret = vc_as_string( VAR_NAS, VarWrite, 0, 1, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrInvalidArg );
+
+  /* write string */
+  strcpy( S, "192.168.178.22" );
+  ret = vc_as_string( VAR_NAS, VarWrite, S, 1, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  /* read back */
+  memset( S, 'F', sizeof(STRBUF));
+  ret = vc_as_string( VAR_NAS, VarRead, S, 1, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_STRING_EQUAL( S, "192.168.178.22" );
+
+  /* write string that is too big */
+  ret = vc_as_string( VAR_NAS, VarWrite, T, 1, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrSizeTooBig );
+
+  /* check that old value still exists */
+  ret = vc_as_string( VAR_NAS, VarRead, S, 1, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_STRING_EQUAL( S, "192.168.178.22" );
 }
 
 static CU_TestInfo tests_rdwr_str[] = {
@@ -453,7 +483,7 @@ static void wr_const_str(void) {
 }
 
 static CU_TestInfo tests_rd_const_str[] = {
-  { "RD CONST STRIGN", rd_const_str },
+  { "RD CONST STRING", rd_const_str },
   { "WR CONST STRING", wr_const_str },
 	CU_TEST_INFO_NULL,
 };

@@ -88,6 +88,7 @@ static int  vc_init_s32( VAR_DESC const *);
 static int  vc_init_f32( VAR_DESC const *);
 static int  vc_init_f64( VAR_DESC const *);
 static int  vc_init_enum( VAR_DESC const *);
+static int  vc_init_string( VAR_DESC const *);
 
 /* external variables
 ----------------------------------------------------------------------------*/
@@ -199,6 +200,7 @@ ErrCode vc_reset() {
 				break;
 
 			case TYPE_STRING:
+				vc_init_string( var );
 				break;
 		}
 	}
@@ -418,10 +420,10 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 					return kErrAccessDenied;
 				}
 
-				S32 idx = var->data_idx;
+				S32 idx = var->descr_idx;
 				DATA_STRING const *data = &s_vc_data->data_const_str[idx];
 				size_t len = strlen(data);
-				len = len >= sizeof(STRBUF) ? sizeof(STRBUF)-1 : len;
+				len = (len >= sizeof(STRBUF)) ? sizeof(STRBUF)-1 : len;
 				memcpy( val, data, len );
 				val[len] = '\0';
 			}
@@ -782,4 +784,28 @@ static ErrCode vc_init_enum( VAR_DESC const *var ) {
 	return kErrNone;
 }
 
+/*** vc_init_string **********************************************************/
+/**
+ *	 Copy data from the descriptor into the data location of \b var
+ *
+ *   @param var   Variable handle
+ *
+ *   @return kErrNone, when done.
+ */
+static int  vc_init_string( VAR_DESC const *var ) {
+	DATA_STRING const *descr = &s_vc_data->data_const_str[var->descr_idx];
+	DATA_STRING       *data  = &s_vc_data->data_str[var->data_idx];
+	U16 flags = var->type & TYPE_FLAG;
+
+	if( flags & TYPE_CONST ) {
+		return kErrNone;
+	}
+    
+	size_t len = strlen( descr );
+	for( U16 i = 0; i < var->vec_items; i++ ) {
+		memcpy( data, descr, len );
+		data += sizeof(STRBUF);
+	}
+	return kErrNone;
+}
 /*______________________________________________________________________EOF_*/

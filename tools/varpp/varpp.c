@@ -541,16 +541,10 @@ int save_inc_file( DataItem *head, char *szFilename )
  */
 int save_var_file( DataItem *head, char *szFilename )
 {
-  enum {
-    kTypeConstString = TYPE_LAST,
-
-    kTypeLastPP
-  };
-
   int nRet;
   DataItem *item;
-  int data_cnt[kTypeLastPP+1] = {};
-  int descr_cnt[kTypeLastPP+1] = {};
+  int data_cnt[TYPE_LAST];
+  int descr_cnt[TYPE_LAST];
   spool_iter iter;
   S16 scpi_idx = 0;
   int scpi_ofs = 0;
@@ -594,18 +588,25 @@ int save_var_file( DataItem *head, char *szFilename )
     int descr_idx = descr_cnt[type];
     int incr_descr = 1;
 
-    if(( type == TYPE_STRING ) && ( flags & TYPE_CONST )) {
+    if( 0 == strcmp(item->hnd, "VAR_MODE_AUTO")) {
+      incr_descr = 1;
+    }
+
+    if( TYPE_STRING == type ) {
       PP_DATA_STRING *p = &item->data.data_string;
       StringItem *si = strpool_Get( &s_StrPools[spStrings], p->def_value );
-      type = kTypeConstString;
 
-      if( si->offset == -1 ) {
-        si->offset = data_cnt[type];
+      if( flags & TYPE_CONST ) {
+        data_idx = 0;
       }
 
-      data_idx = si->offset + scpi_ofs;
+      if( si->offset == -1 ) {
+        si->offset = descr_cnt[type] + scpi_ofs;
+      }
+
+      descr_idx = si->offset;
     }
-    else if ( type == TYPE_ENUM ) {
+    else if ( TYPE_ENUM == type ) {
       PP_DATA_ENUM *d = &item->data.data_enum;
       char *buf = calloc( 1024, 1 );
       StringItem *si;
@@ -647,15 +648,14 @@ int save_var_file( DataItem *head, char *szFilename )
         break;
 
       case TYPE_STRING:
-        data_cnt[type] += sizeof(STRBUF) * item->vec_items;
-        descr_cnt[type]++;
-        break;
-
-      case kTypeConstString:
         {
           PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
-          data_cnt[type] +=  strlen( p->def_value ) +1;
-          descr_cnt[type]++;
+          size_t len = strlen( p->def_value ) +1;
+          descr_cnt[type] += len;
+
+          if( TYPE_CONST != flags ) {
+            data_cnt[type] += sizeof(STRBUF) * item->vec_items;
+          }
         }
         break;
 
@@ -820,7 +820,7 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
   else {
     // No item was declared
     // Emit an array of size 1. This prohibits a warning from the compiler.
-    fprintf( fp, "%d];\n", (0 == data_cnt) ? 1 : data_cnt );
+    fprintf( fp, "%d];\n\n", (0 == data_cnt) ? 1 : data_cnt );
   }
   
 
@@ -832,6 +832,8 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
   int i = 1;
   char const *ztype;
   DataItem *item;
+  int init_data;
+  int data_cnt = 0;
 
   switch( type ) {
     case TYPE_STRING:
@@ -843,13 +845,27 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
       return -1;
   }
 
-  fprintf( fp, "%s %s[] = {\n", ztype, name );
+  init_data = s_Cfg.init_data;
+  if( init_data ) {
+    fprintf( fp, "%s %s[] = {\n", ztype, name );
+  }
+  else
+  {
+    fprintf( fp, "%s %s[", ztype, name );
+  }
+
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
     U16 type = item->type & TYPE_MASK;
     U16 isConst = (item->type & TYPE_FLAG) & TYPE_CONST;
+
     if( type != TYPE_STRING || (type == TYPE_STRING && isConst)) {
+      continue;
+    }
+
+    data_cnt += sizeof(STRBUF) * item->vec_items;
+    if( 0 == init_data ) {
       continue;
     }
 
@@ -865,16 +881,31 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
       }
 
       for( size_t k = 0; k < sizeof(STRBUF); k++ ) {
+        char c = data->def_value[k];
         if( k > 0 ) {
           fputs( ", ", fp );
         }
-        fprintf( fp, "0x%02x", data->def_value[k] );
+
+        if( isascii( c )) {
+          fprintf( fp, "%c", c );
+        }
+        else{
+          fprintf( fp, "%#x", c );
+        }
       }
     }
 
     i++;
   }
-  fputs( "\n};\n\n", fp );
+
+  if( init_data ) {
+    fputs( "\n};\n\n", fp );
+  }
+  else {
+    // No item was declared
+    // Emit an array of size 1. This prohibits a warning from the compiler.
+    fprintf( fp, "%d];\n", (0 == data_cnt) ? 1 : data_cnt );
+  }
 
   return 0;  
 }
@@ -896,6 +927,7 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
 
   fprintf( fp, "%s %s[] = {\n", ztype, name );
 
+  /* Write SCPI strings first. */
   LL_FOREACH( head, item ) {
     char *s = item->scpi;
 
@@ -911,26 +943,26 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
     fputs( "0,\n", fp );
   }
 
-
+  /* Write initial values of strings and const strings  */
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
     U16 type = item->type & TYPE_MASK;
-    U16 isConst = (item->type & TYPE_FLAG) & TYPE_CONST;
-    if( type != TYPE_STRING || (type == TYPE_STRING && !isConst)) {
+    if( type != TYPE_STRING ) {
       continue;
     }
 
     if( i != 1 ) {
-      fputs( ", 0x00,\n", fp );
+      fputs( ", 0,\n", fp );
     }
 
     fprintf(fp, "  /* %s */\n  ", item->hnd );
-    for( int j = 0; j < item->vec_items; j++ ) {
+    /* We only need one value in the descriptor. */
+    for( int j = 0; j < 1; j++ ) {
       int k;
 
       if( j > 0 ) {
-        fputs( ",\n  ", fp );
+        fputs( ", 0,\n  ", fp );
       }
 
       k = 0;
@@ -943,14 +975,14 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
           fprintf( fp, "'%c'", *p );
         }
         else {
-          fprintf( fp, "0x%02x", *p );
+          fprintf( fp, "%#x", *p );
         }
       }
     }
 
     i++;
   }
-  fputs( ", 0x00\n};\n\n", fp );
+  fputs( ", 0\n};\n\n", fp );
 
   return 0;  
 }
