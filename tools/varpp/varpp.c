@@ -643,7 +643,7 @@ int save_var_file( DataItem *head, char *szFilename )
       case TYPE_FLOAT:
       case TYPE_DOUBLE:
         data_cnt[type] += item->vec_items;
-        descr_cnt[type]++;
+        descr_cnt[type] += item->vec_items;
         break;
 
       case TYPE_STRING:
