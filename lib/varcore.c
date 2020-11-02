@@ -326,6 +326,10 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
+	if( NULL == val ) {
+		return kErrInvalidArg;
+	}
+
 	var = &s_vc_data->vars[hnd];
 	type = var->type & TYPE_MASK;
 	flags = var->type & TYPE_FLAG;
@@ -430,6 +434,10 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				DATA_STRING *data = &s_vc_data->data_str[idx];
 
 				if( rdwr == VarWrite ) {
+					size_t len = strlen( val );
+					if( len > sizeof(STRBUF)) {
+						return kErrSizeTooBig;
+					}
 					memcpy( data, val, sizeof(STRBUF));
 				}
 				else {
