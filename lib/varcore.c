@@ -690,7 +690,7 @@ static ErrCode vc_chk_vector( VAR_DESC const *var, int8_t chan )
  *   @return kErrNone, when done.
  */
 static ErrCode vc_init_s16( VAR_DESC const *var ) {
-	DATA_S16 const *descr = &s_vc_data->descr_s16[var->data_idx];
+	DATA_S16 const *descr = &s_vc_data->descr_s16[var->descr_idx];
 	DATA_S16       *data  = &s_vc_data->data_s16[var->data_idx];
 
 	memcpy( data, descr, sizeof(DATA_S16) * var->vec_items );
@@ -706,7 +706,7 @@ static ErrCode vc_init_s16( VAR_DESC const *var ) {
  *   @return kErrNone, when done.
  */
 static ErrCode vc_init_s32( VAR_DESC const *var ) {
-	DATA_S32 const *descr = &s_vc_data->descr_s32[var->data_idx];
+	DATA_S32 const *descr = &s_vc_data->descr_s32[var->descr_idx];
 	DATA_S32       *data  = &s_vc_data->data_s32[var->data_idx];
 
 	memcpy( data, descr, sizeof(DATA_S32) * var->vec_items );
@@ -722,7 +722,7 @@ static ErrCode vc_init_s32( VAR_DESC const *var ) {
  *   @return kErrNone, when done.
  */
 static ErrCode vc_init_f32( VAR_DESC const *var ) {
-	DATA_F32 const *descr = &s_vc_data->descr_f32[var->data_idx];
+	DATA_F32 const *descr = &s_vc_data->descr_f32[var->descr_idx];
 	DATA_F32       *data  = &s_vc_data->data_f32[var->data_idx];
 
 	memcpy( data, descr, sizeof(DATA_F32) * var->vec_items );
@@ -738,7 +738,7 @@ static ErrCode vc_init_f32( VAR_DESC const *var ) {
  *   @return kErrNone, when done.
  */
 static ErrCode vc_init_f64( VAR_DESC const *var ) {
-	DATA_F64 const *descr = &s_vc_data->descr_f64[var->data_idx];
+	DATA_F64 const *descr = &s_vc_data->descr_f64[var->descr_idx];
 	DATA_F64       *data  = &s_vc_data->data_f64[var->data_idx];
 
 	memcpy( data, descr, sizeof(DATA_F64) * var->vec_items );
