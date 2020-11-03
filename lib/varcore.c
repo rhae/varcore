@@ -118,6 +118,10 @@ char const *s_type_str[] = {
 	"TYPE_ACTION"
 };
 
+static VAR_DESC const* get_var( HND hnd ) {
+	return &s_vc_data->vars[hnd];
+}
+
 
 /*** is_vector **************************************************************/
 /**
@@ -181,7 +185,7 @@ ErrCode vc_reset() {
 	ErrCode E       = kErrNone;
 
 	for( HND hVar = 0; E == kErrNone && hVar < var_cnt; hVar++ ) {
-		VAR_DESC const *var  = &s_vc_data->vars[hVar];
+		VAR_DESC const *var  = get_var(hVar);
 		U16             type = var->type & TYPE_MASK;
 		
 		switch( type ) {
@@ -231,7 +235,7 @@ int vc_get_access( HND hnd, int chan ) {
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
-	var = &s_vc_data->vars[hnd];
+	var = get_var( hnd );
 	return var->acc_rights;
 }
 
@@ -247,7 +251,7 @@ int vc_get_datatype( HND hnd ) {
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
-	var = &s_vc_data->vars[hnd];
+	var = get_var( hnd );
 	return var->type;
 }
 
@@ -270,7 +274,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
-	var = &s_vc_data->vars[hnd];
+	var = get_var( hnd );
 
 	switch( var->type & TYPE_MASK ) {
 		case TYPE_INT16:
@@ -326,7 +330,7 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
-	var = &s_vc_data->vars[hnd];
+	var = get_var( hnd );
 	data = &s_vc_data->data_s32[var->data_idx + chan];
 
 	if((var->type & TYPE_MASK) != TYPE_INT32 ) {
@@ -373,7 +377,7 @@ ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
-	var = &s_vc_data->vars[hnd];
+	var = get_var( hnd );
 	data = &s_vc_data->data_f32[var->data_idx + chan];
 
 	if((var->type & TYPE_MASK) != TYPE_FLOAT ) {
@@ -432,7 +436,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 		return kErrInvalidArg;
 	}
 
-	var = &s_vc_data->vars[hnd];
+	var = get_var( hnd );
 	type = var->type & TYPE_MASK;
 	flags = var->type & TYPE_FLAG;
 	switch( type ) {
