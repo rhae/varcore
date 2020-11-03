@@ -1577,7 +1577,7 @@ int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
     mbr = mbr->next;
   }
 
-  return s - BufSize;
+  return (int)(s - BufSize);
 }
 
 static int find_opt( char const *p, char const **opt_list, char **endp, int *idx ) {
