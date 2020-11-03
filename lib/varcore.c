@@ -355,6 +355,52 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 	return ret;
 }
 
+/*** vc_as_float ************************************************************/
+/**
+ *   Read or write a variable of TYPE_FLOAT
+ *
+ *   @param hnd    Variable handle
+ *   @param rdwr   Read/Write access
+ *   @param val    Pointer to value
+ *   @param chan   Channel
+ *   @param req    Request source
+ */
+ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
+	ErrCode ret = kErrNone;
+	VAR_DESC const *var;
+	DATA_F32 *data;
+
+	assert( s_vc_data );
+	assert( hnd < s_vc_data->var_cnt );
+
+	var = &s_vc_data->vars[hnd];
+	data = &s_vc_data->data_f32[var->data_idx + chan];
+
+	if((var->type & TYPE_MASK) != TYPE_FLOAT ) {
+		return kErrInvalidType;
+	}
+
+	ret = acc_allowed( var, rdwr, req );
+	if( ret != kErrNone ) {
+		return ret;
+	}
+
+  	if( chan > 0 ) {
+		ret = vc_chk_vector( var, chan );
+		if( ret != kErrNone ) {
+			return ret;
+		}
+	}
+
+	if( rdwr == VarRead ) {
+		*(F32 *)val = data->def_value;
+	}
+	else {
+		data->def_value = *(F32*)val;
+	}
+	
+	return ret;
+}
 
 /*** vc_as_string ***********************************************************/
 /**
@@ -511,54 +557,6 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 		default:
 			LOG_UNH_CASE( type );
 			break;
-	}
-	
-	return ret;
-}
-
-
-/*** vc_as_float ************************************************************/
-/**
- *   Read or write a variable of TYPE_FLOAT
- *
- *   @param hnd    Variable handle
- *   @param rdwr   Read/Write access
- *   @param val    Pointer to value
- *   @param chan   Channel
- *   @param req    Request source
- */
-ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
-	ErrCode ret = kErrNone;
-	VAR_DESC const *var;
-	DATA_F32 *data;
-
-	assert( s_vc_data );
-	assert( hnd < s_vc_data->var_cnt );
-
-	var = &s_vc_data->vars[hnd];
-	data = &s_vc_data->data_f32[var->data_idx + chan];
-
-	if((var->type & TYPE_MASK) != TYPE_FLOAT ) {
-		return kErrInvalidType;
-	}
-
-	ret = acc_allowed( var, rdwr, req );
-	if( ret != kErrNone ) {
-		return ret;
-	}
-
-  	if( chan > 0 ) {
-		ret = vc_chk_vector( var, chan );
-		if( ret != kErrNone ) {
-			return ret;
-		}
-	}
-
-	if( rdwr == VarRead ) {
-		*(F32 *)val = data->def_value;
-	}
-	else {
-		data->def_value = *(F32*)val;
 	}
 	
 	return ret;
