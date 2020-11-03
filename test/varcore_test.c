@@ -535,9 +535,23 @@ static void wr_enum(void) {
   CU_ASSERT_EQUAL( YNU, -1 );
 }
 
+static void wr_enum_invalid(void) {
+  S16 YNU;
+  ErrCode ret;
+
+  YNU = -3;
+  ret = vc_as_int16( VAR_YNU, VarWrite, &YNU, 5, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrInvalidEnum );
+  YNU = 99;
+  ret = vc_as_int16( VAR_YNU, VarRead, &YNU, 5, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( YNU, -1 );
+}
+
 static CU_TestInfo tests_rdwr_enum[] = {
   { "RD ENUM", rd_enum },
   { "WR ENUM", wr_enum },
+  { "WR ENUM (invalid value)", wr_enum_invalid },
 	CU_TEST_INFO_NULL,
 };
 

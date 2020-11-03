@@ -88,14 +88,15 @@
 
 /* list of local defined functions
 ----------------------------------------------------------------------------*/
-static int  vc_chk_vector( VAR_DESC const *, int8_t );
-static int  vc_init_s16( VAR_DESC const *);
-static int  vc_init_s32( VAR_DESC const *);
-static int  vc_init_f32( VAR_DESC const *);
-static int  vc_init_f64( VAR_DESC const *);
-static int  vc_init_enum( VAR_DESC const *);
-static int  vc_init_string( VAR_DESC const *);
+static int     vc_chk_vector( VAR_DESC const *, int8_t );
+static int     vc_init_s16( VAR_DESC const *);
+static int     vc_init_s32( VAR_DESC const *);
+static int     vc_init_f32( VAR_DESC const *);
+static int     vc_init_f64( VAR_DESC const *);
+static int     vc_init_enum( VAR_DESC const *);
+static int     vc_init_string( VAR_DESC const *);
 
+static ErrCode vc_valid_enum( DESCR_ENUM const *, S16 );
 /* external variables
 ----------------------------------------------------------------------------*/
 
@@ -268,17 +269,19 @@ int vc_get_datatype( HND hnd ) {
 ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	ErrCode ret = kErrNone;
 	VAR_DESC const *var;
-	DATA_S16 *data_s16 = NULL;
-	DATA_ENUM *data_enum = NULL;
+	DATA_S16 *data;
+	DATA_ENUM *data_enum;
+	U16 type;
 
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
 	var = get_var( hnd );
+	type = var->type & TYPE_MASK;
 
-	switch( var->type & TYPE_MASK ) {
+	switch( type ) {
 		case TYPE_INT16:
-			data_s16 = &s_vc_data->data_s16[var->data_idx + chan];
+			data = &s_vc_data->data_s16[var->data_idx + chan];
 			break;
 
 		case TYPE_ENUM:
@@ -302,13 +305,20 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	}
 
 	if( rdwr == VarRead ) {
-		*val = data_s16 ? data_s16->def_value : *data_enum;
+		*val = (TYPE_INT16 == type) ? data->def_value : *data_enum;
 	}
 	else {
-		S16 *def_value = data_s16 ? &data_s16->def_value : data_enum;
-		*def_value = *val;
-	}
-	
+		if( TYPE_INT16 == type ) {
+			data->def_value = *val;
+		}
+		else {
+			DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->descr_idx];
+			ret = vc_valid_enum( dscr, *val );
+			if( ret == kErrNone ) {
+				*data_enum = *val;
+			}
+		}	
+
 	return ret;
 }
 
@@ -879,5 +889,27 @@ static int  vc_init_string( VAR_DESC const *var ) {
 		data += sizeof(STRBUF);
 	}
 	return kErrNone;
+}
+
+/*** vc_valid_enum ***************************************************/
+/**
+ *	 Check if \b val is a valid enum member.
+ *
+ *   @param dscr   pointer to ENUM descriptor
+ *   @param val    value
+ *
+ *   @return kErrNone when val is a member of the enum.
+ */
+static ErrCode vc_valid_enum( DESCR_ENUM const *dscr, S16 val ) {
+	ErrCode E = kErrInvalidEnum;
+
+	for( U16 i = 0; i < dscr->cnt; i++ ) {
+		ENUM_MBR const *mbr = (ENUM_MBR const *)&dscr->mbr[i];
+		if( val == mbr->value ) {
+			return kErrNone;
+		}
+	}
+
+	return E;
 }
 /*______________________________________________________________________EOF_*/
