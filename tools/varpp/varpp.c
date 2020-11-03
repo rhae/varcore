@@ -51,6 +51,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <ctype.h>
+#include <time.h>
 
 
 #ifndef UNUSED_PARAM
@@ -204,6 +205,7 @@ typedef struct {
   S32 Minor;
   S32 Patch;
   S8  *Name;
+  S8  *Shortname;
   S8  *Copyright;
   S8  *Date;
 } VERSION;
@@ -211,6 +213,7 @@ typedef struct {
 static VERSION s_Version = {
   1, 2, 0,
   "Variable preprocessor",
+  "varpp",
   "(C) R. Haertel",
   "2020"
 };
@@ -488,6 +491,26 @@ int read_csv_file( DataItem **head, char * szFilename)
   return res;
 }
 
+static void write_header( FILE *fp, char const *description ) {
+  UNUSED_PARAM( description );
+
+  char date[256];
+  time_t t;
+  struct tm *tmp;
+
+  t = time(NULL);
+  tmp = localtime(&t);
+  
+  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", tmp);
+
+  fprintf( fp, "/**\n"
+           " * Generated from %s %d.%d.%d\n"
+           " * \\date %s\n"
+           " ******************************************************/\n\n",
+           s_Version.Shortname,
+           s_Version.Major, s_Version.Minor, s_Version.Patch,
+           date );
+}
 
 /**
  *
@@ -506,6 +529,8 @@ int save_inc_file( DataItem *head, char *szFilename )
   int i = 0;
 
   FILE *fp = fopen( szFilename, "w+");
+
+  write_header( fp, 0 );
 
   defs_iter( &iter );
   for(;;) {
@@ -556,6 +581,7 @@ int save_var_file( DataItem *head, char *szFilename )
   int i = 1;
 
   FILE *fp = fopen( szFilename, "w+");
+  write_header( fp, 0 );
 
   fputs( "VAR_DESC const g_vars[] = {\n", fp );
 
