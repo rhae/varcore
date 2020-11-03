@@ -32,7 +32,13 @@
 
 /**
  * \file   varcore.c
- * \author hae
+ * \author rhae
+ * 
+ * The varcore has a set of variables that can be read or written.
+ * As it is a global storage it makes it easy to access variables from 
+ * all places of a programm. With its SCPI-Strings it is possible
+ * to write a command line iinterface (CLI) to access the data from
+ * outside.
  */
 
 /* local header */
@@ -208,6 +214,16 @@ ErrCode vc_reset() {
 	return E;
 }
 
+/*** vc_get_access ***************************************************/
+/**
+ *   Return access rights from handle.
+ * 
+ *   @note:
+ *   At the moment chan is not used.
+ * 
+ *   @param hnd     Variable-handle
+ *   @param chan    Channel
+ */
 int vc_get_access( HND hnd, int chan ) {
 	VAR_DESC const *var;
 	UNUSED_PARAM( chan );
@@ -219,10 +235,31 @@ int vc_get_access( HND hnd, int chan ) {
 	return var->acc_rights;
 }
 
-/*** vc_as_int16 ************************************************************/
+/*** vc_get_datatype *************************************************/
 /**
+ *   Return datatype from handle.
+ * 
+ *   @param hnd     Variable-handle
+ */
+int vc_get_datatype( HND ) {
+	VAR_DESC const *var;
+
+	assert( s_vc_data );
+	assert( hnd < s_vc_data->var_cnt );
+
+	var = &s_vc_data->vars[hnd];
+	return var->type;
+}
+
+/*** vc_as_int16 *****************************************************/
+/**
+ *   Read or write a variable of TYPE_INT16 and TYPE_ENUM
  *
- *
+ *   @param hnd    Variable handle
+ *   @param rdwr   Read/Write access
+ *   @param val    Pointer to value
+ *   @param chan   Channel
+ *   @param req    Request source
  */
 ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	ErrCode ret = kErrNone;
@@ -273,8 +310,13 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 
 /*** vc_as_int32 ************************************************************/
 /**
+ *   Read or write a variable of TYPE_INT32
  *
- *
+ *   @param hnd    Variable handle
+ *   @param rdwr   Read/Write access
+ *   @param val    Pointer to value
+ *   @param chan   Channel
+ *   @param req    Request source
  */
 ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 	ErrCode ret = kErrNone;
@@ -296,7 +338,7 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 		return ret;
 	}
 
-  if( chan > 0) {
+    if( chan > 0) {
 		ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
@@ -316,8 +358,20 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 
 /*** vc_as_string ***********************************************************/
 /**
+ *   Read or write a variable of any type.
+ * 
+ *   VarWrite:
+ *   - The data is converted to the underlying data type with
+ *     one of the functions strtol, strtof, strtod
+ * 
+ *   VarRead:
+ *   - The data is converted to a string.
  *
- *
+ *   @param hnd    Variable handle
+ *   @param rdwr   Read/Write access
+ *   @param val    Pointer to value
+ *   @param chan   Channel
+ *   @param req    Request source
  */
 ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 	ErrCode ret = kErrNone;
@@ -465,8 +519,13 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 
 /*** vc_as_float ************************************************************/
 /**
+ *   Read or write a variable of TYPE_FLOAT
  *
- *
+ *   @param hnd    Variable handle
+ *   @param rdwr   Read/Write access
+ *   @param val    Pointer to value
+ *   @param chan   Channel
+ *   @param req    Request source
  */
 ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	ErrCode ret = kErrNone;
@@ -505,6 +564,17 @@ ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req ) {
 	return ret;
 }
 
+/*** vc_dump_var *****************************************************/
+/**
+ *   Write the contents of the variable to a string buffer.
+ * 
+ *   This function is for introspection and debugging purposes.
+ *
+ *   @param buf    Pointer to atring buffer
+ *   @param bufsz  Buffer size
+ *   @param hnd    Variable handle
+ *   @param chan   Channel
+ */
 int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	#define CHECK_LEN( b, n, l, s ) do { \
      if( n < 0 || (l+n) > s ) {  \
