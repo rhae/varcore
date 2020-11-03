@@ -135,6 +135,106 @@ static void wr32(void)
   CU_ASSERT_EQUAL( ser, 0xaa55 );
 }
 
+static void wr32_min_max(void)
+{
+  S32 Min = 0;
+  S32 Max = 0;
+  S32 Mn;
+  S32 Mx;
+	ErrCode ret;
+
+  /* Assumption: Min < 0, Max > 0 !! */
+  
+  ret = vc_get_min( VAR_POW, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  ret = vc_get_max( VAR_POW, (U8*)&Max, 0 );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  
+  Mn = Min;
+  ret = vc_as_int32( VAR_POW, VarWrite, &Mn, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  Mn = Min-1;
+  ret = vc_as_int32( VAR_POW, VarWrite, &Mn, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrLowerLimit );
+
+  Mn = Min+1;
+  ret = vc_as_int32( VAR_POW, VarWrite, &Mn, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  Mx = Max;
+  ret = vc_as_int32( VAR_POW, VarWrite, &Mx, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  Mx = Max-1;
+  ret = vc_as_int32( VAR_POW, VarWrite, &Mx, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  Mx = Max+1;
+  ret = vc_as_int32( VAR_POW, VarWrite, &Mx, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrUpperLimit );
+}
+
+static void wr32_clip(void)
+{
+  S32 PAB = 0;
+  S32 Min = 0;
+  S32 Max = 0;
+  S32 Mn;
+  S32 Mx;
+	ErrCode ret;
+
+
+  /* Assumption: Min < 0, Max > 0 !! */
+  
+  ret = vc_get_min( VAR_PAB, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  ret = vc_get_max( VAR_PAB, (U8*)&Max, 0 );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  
+  Mn = Min;
+  ret = vc_as_int32( VAR_PAB, VarWrite, &Mn, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  Mn = Min-1;
+  ret = vc_as_int32( VAR_PAB, VarWrite, &Mn, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  ret = vc_as_int32( VAR_PAB, VarRead, &PAB, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( PAB, Min );
+
+  Mn = Min+1;
+  ret = vc_as_int32( VAR_PAB, VarWrite, &Mn, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  ret = vc_as_int32( VAR_PAB, VarRead, &PAB, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( PAB, Mn );
+
+  Mx = Max;
+  ret = vc_as_int32( VAR_PAB, VarWrite, &Mx, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  ret = vc_as_int32( VAR_PAB, VarRead, &PAB, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( PAB, Mx );
+
+  Mx = Max-1;
+  ret = vc_as_int32( VAR_PAB, VarWrite, &Mx, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  ret = vc_as_int32( VAR_PAB, VarRead, &PAB, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( PAB, Mx );
+
+  Mx = Max+1;
+  ret = vc_as_int32( VAR_PAB, VarWrite, &Mx, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  ret = vc_as_int32( VAR_PAB, VarRead, &PAB, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( PAB, Max );
+}
+
+
 static void rd32_chan(void) {
   S32 power[VEC_LEM] = { 0, 0, 0, 0 };
   ErrCode ret;
@@ -192,6 +292,8 @@ static CU_TestInfo tests_rdwr32[] = {
   { "WR", wr32 },
   { "RD chan x", rd32_chan },
   { "WR chan x", wr32_chan },
+  { "WR min/max", wr32_min_max },
+  { "WR clip", wr32_clip },
 	CU_TEST_INFO_NULL,
 };
 

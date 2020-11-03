@@ -1334,7 +1334,9 @@ int  get_vector( char *name, int *value )
 int  get_access( char *pAccess, int *pValue)
 {
   static Map_t Access[] = {
-      {"REQ_ADMIN", REQ_ADMIN}
+      {"REQ_ADMIN",  REQ_ADMIN},
+      {"FLAG_LIMIT", FLAG_LIMIT},
+      {"FLAG_CLIP",  FLAG_CLIP}
   };
 
   int result = -1;

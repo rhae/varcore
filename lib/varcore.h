@@ -93,8 +93,11 @@ enum {
 	REQ_EX2     = REQ_EX2_W | REQ_EX2_R,
 	
 	REQ_ADMIN   = 0x8000,
+	FLAG_LIMIT  = 0x4000,
+	FLAG_CLIP   = 0x2000,
 
 	MSK_ACC     = 0x00ff,
+	REQ_FLAG    = 0xff00
 };
 
 enum {
@@ -108,6 +111,7 @@ enum {
 /* global defined data types
 ----------------------------------------------------------------------------*/
 typedef char            S8;
+typedef unsigned char   U8;
 typedef short           S16;
 typedef unsigned short  U16;
 typedef int             S32;
@@ -196,15 +200,12 @@ typedef struct _VC_DATA {
 
 	DATA_S32        *data_s32;
 	HND              data_s32_cnt;
-/*
-	DATA_STRING    *descr_str;
-	HND             descr_str_cnt;
-*/
+
 	DATA_STRING    *data_str;
 	HND             data_str_cnt;
 
 	DATA_STRING const *data_const_str;
-	HND             data_const_str_cnt;
+	HND                data_const_str_cnt;
 
 	S16             *data_enum;
 	HND              data_enum_cnt;
@@ -239,7 +240,10 @@ ErrCode vc_init( VC_DATA const* );
 ErrCode vc_reset();
 ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req );
 ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req );
-ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req );
+ErrCode vc_as_float( HND hnd, int rdwr, F32 *val, U16 chan, U16 req );
 ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req );
+
+ErrCode vc_get_min( HND, U8*, U16 );
+ErrCode vc_get_max( HND, U8*, U16 );
 
 int vc_dump_var( char *, U16, HND, U16 );

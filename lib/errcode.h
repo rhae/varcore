@@ -51,7 +51,7 @@ enum {
 	kErrInvalidType       = (kErrBase +  7),
 	kErrSizeTooBig        = (kErrBase +  8),
 	kErrInvalidArg        = (kErrBase +  9),
-
+	kErrInvalidEnum       = (kErrBase + 10),
 };
 
 /* global defined data types
