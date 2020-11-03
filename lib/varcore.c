@@ -278,6 +278,10 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
+	if( NULL == val ) {
+		return kErrInvalidArg;
+	}
+
 	var = get_var( hnd );
 	type = var->type & TYPE_MASK;
 
@@ -364,6 +368,10 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
 
+	if( NULL == val ) {
+		return kErrInvalidArg;
+	}
+
 	var = get_var( hnd );
 	data = &s_vc_data->data_s32[var->data_idx + chan];
 
@@ -429,6 +437,10 @@ ErrCode vc_as_float( HND hnd, int rdwr, F32 *val, U16 chan, U16 req ) {
 
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
+
+	if( NULL == val ) {
+		return kErrInvalidArg;
+	}
 
 	var = get_var( hnd );
 	data = &s_vc_data->data_f32[var->data_idx + chan];
@@ -1027,16 +1039,16 @@ static ErrCode get_min_max( HND hnd, U8* val, U16 chan, int minmax ) {
 		return kErrInvalidArg;
 	}
 
+    var = get_var( hnd );
+    type = var->type & TYPE_MASK;
+    
 	if( chan > 0 ) {
 		ErrCode ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
 		}
 	}
-
-	var = get_var( hnd );
-	type = var->type & TYPE_MASK;
-
+	
 	switch( type ) {
 		case TYPE_INT16:
 			dscr_s16 = &s_vc_data->data_s16[ var->data_idx + chan ];
