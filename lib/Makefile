@@ -4,10 +4,11 @@ target ::= libvarcore.a
 sources := varcore.c
 objects := $(sources:.c=.o)
 
-CC := clang
-AR := ar
+CC      := clang
+AR      := ar
 
-CFLAGS := -g -W -Wall -pedantic
+# CFLAGS  := -g -W -Wall -pedantic -fsanitize=undefined
+CFLAGS  := -g -W -Wall -pedantic
 
 all: $(target)
 

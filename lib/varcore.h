@@ -79,7 +79,7 @@ enum {
 enum {
 	REQ_PRG_R   = 0x0001,
 	REQ_CMD_R   = 0x0002,
-  REQ_EX1_R   = 0x0004,
+    REQ_EX1_R   = 0x0004,
 	REQ_EX2_R   = 0x0008,
 
 	REQ_PRG_W   = REQ_PRG_R << 4,
@@ -161,6 +161,7 @@ typedef struct _ENUM_MBR {
 } ENUM_MBR;
 
 typedef struct _DESCR_ENUM {
+	S16 def_value;
 	U16 cnt;
 	ENUM_MBR mbr[];
 } DESCR_ENUM;
@@ -181,8 +182,8 @@ typedef struct _VAR_DESC {
 } VAR_DESC;
 
 typedef struct _VC_DATA {
-	VAR_DESC    *vars;
-	HND          var_cnt;
+	VAR_DESC const   *vars;
+	HND const         var_cnt;
 
 	DATA_S16 const  *descr_s16;
 	HND              descr_s16_cnt;
@@ -211,16 +212,18 @@ typedef struct _VC_DATA {
 	S16 const       *data_mbr;
 	HND              mbr_cnt;
 
+	DATA_F32 const  *descr_f32;
+	HND              descr_f32_cnt;
+
+	DATA_F32        *data_f32;
+	HND              data_f32_cnt;
+
+	DATA_F64 const  *descr_f64;
+	HND              descr_f64_cnt;
+
+	DATA_F64        *data_f64;
+	HND              data_f64_cnt;
 #if 0
-	DATA_F32    *descr_f32;
-	HND          descr_f32_cnt;
-
-	DATA_F32    *data_f32;
-	HND          data_f32_cnt;
-
-	DATA_F64    *data_f64;
-	HND          data_f64_cnt;
-
 	DATA_STRING *descr_str;
 	HND          descr_str_cnt;
 
@@ -232,7 +235,8 @@ typedef struct _VC_DATA {
 
 /* list of global defined functions
 ----------------------------------------------------------------------------*/
-int vc_init( VC_DATA const* );
+ErrCode vc_init( VC_DATA const* );
+ErrCode vc_reset();
 ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req );
 ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req );
 ErrCode vc_as_float( HND hnd, int rdwr, float *val, U16 chan, U16 req );

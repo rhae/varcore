@@ -76,6 +76,7 @@ typedef struct {
   Section section;
   char const *prefix;
   size_t prefix_len;
+  int init_data;
 } Config;
 
 typedef struct _DATA_INT {
@@ -135,10 +136,10 @@ typedef struct {
 } Map_t;
 
 
-static int  GetType( char *, int *);
+static int  get_type( char *, int *);
 static int  get_vector( char *, int *);
-static int  GetAccess( char *, int *);
-static int  GetStorage( char *, int *);
+static int  get_access( char *, int *);
+static int  get_storage( char *, int *);
 
 enum {
   line_len  = 255,
@@ -157,16 +158,13 @@ static int parse_enum( DataItem *, size_t, CSV_BUF* );
 int  read_csv_file( DataItem **, char * );
 int  save_inc_file( DataItem *, char * );
 int  save_var_file( DataItem *, char * );
-int  save_data_int( FILE *fp, DataItem *head, char const *name, int type );
-int  save_data_float( FILE *fp, DataItem *head, char const *name, int type );
+int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int );
 int  save_data_string( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type );
 int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type );
 int  serialize_enum( char *, size_t, PP_DATA_ENUM * );
 int  save_vc_def( FILE *fp, DataItem *head );
-
-int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type );
 
 void handle_pragma( char const*, LOC const* );
 
@@ -211,7 +209,7 @@ typedef struct {
 } VERSION;
 
 static VERSION s_Version = {
-  1, 1, 0,
+  1, 2, 0,
   "Variable preprocessor",
   "(C) R. Haertel",
   "2020"
@@ -223,6 +221,12 @@ static void puts_version() {
    s_Version.Major, s_Version.Minor, s_Version.Patch,
    s_Version.Copyright,
    s_Version.Date );
+}
+
+static void print_cfg( Config *C ) {
+  log_printf(LogDebug, "Pragmas:");
+  log_printf(LogDebug, "  prefix     : %s", C->prefix );
+  log_printf(LogDebug, "  init_data  : %s", C->init_data ? "on" : "off" );
 }
 
 /**
@@ -251,8 +255,10 @@ int main( int argc, char **argv )
   /* initializes s_Cfg */
   handle_pragma( "#pragma section var", 0 );
   handle_pragma( "#pragma prefix VAR_", 0 );
+  handle_pragma( "#pragma init_data off", 0 );
 
   puts_version();
+  print_cfg( &s_Cfg );
 
   sprintf( def, "#define VARPP_MAJOR       %d", s_Version.Major );
   defs_add( def, 0 );
@@ -424,7 +430,7 @@ int read_csv_file( DataItem **head, char * szFilename)
     }
 
     log_printf( LogDebug, "Process %s with type %s", cols[ColHnd], cols[ColType] );
-    int ret = GetType( cols[ColType], &item->type );
+    int ret = get_type( cols[ColType], &item->type );
     if ( ret ) {
       log_printf( LogInfo, "unknown datatype: %s", cols[ColType] );
       free( item );
@@ -435,8 +441,8 @@ int read_csv_file( DataItem **head, char * szFilename)
     s_nTypeCnt[(item->type >> 8) & 0xf]++;
 
     get_vector( cols[ColVector], &item->vec_items );
-    GetStorage( cols[ColStorage], &item->storage );
-    GetAccess( cols[ColAccess], &item->acc_rights );
+    get_storage( cols[ColStorage], &item->storage );
+    get_access( cols[ColAccess], &item->acc_rights );
 
     if( item->vec_items > 1 ) {
       item->type |= TYPE_VECTOR;
@@ -535,16 +541,10 @@ int save_inc_file( DataItem *head, char *szFilename )
  */
 int save_var_file( DataItem *head, char *szFilename )
 {
-  enum {
-    kTypeConstString = TYPE_LAST,
-
-    kTypeLastPP
-  };
-
   int nRet;
   DataItem *item;
-  int data_cnt[kTypeLastPP+1] = {};
-  int descr_cnt[kTypeLastPP+1] = {};
+  int data_cnt[TYPE_LAST];
+  int descr_cnt[TYPE_LAST];
   spool_iter iter;
   S16 scpi_idx = 0;
   int scpi_ofs = 0;
@@ -557,7 +557,7 @@ int save_var_file( DataItem *head, char *szFilename )
 
   FILE *fp = fopen( szFilename, "w+");
 
-  fputs( "VAR_DESC g_vars[] = {\n", fp );
+  fputs( "VAR_DESC const g_vars[] = {\n", fp );
 
   strpool_iter( &iter, &s_StrPools[spScpi] );
   for(;;) {
@@ -588,18 +588,25 @@ int save_var_file( DataItem *head, char *szFilename )
     int descr_idx = descr_cnt[type];
     int incr_descr = 1;
 
-    if(( type == TYPE_STRING ) && ( flags & TYPE_CONST )) {
+    if( 0 == strcmp(item->hnd, "VAR_MODE_AUTO")) {
+      incr_descr = 1;
+    }
+
+    if( TYPE_STRING == type ) {
       PP_DATA_STRING *p = &item->data.data_string;
       StringItem *si = strpool_Get( &s_StrPools[spStrings], p->def_value );
-      type = kTypeConstString;
 
-      if( si->offset == -1 ) {
-        si->offset = data_cnt[type];
+      if( flags & TYPE_CONST ) {
+        data_idx = 0;
       }
 
-      data_idx = si->offset + scpi_ofs;
+      if( si->offset == -1 ) {
+        si->offset = descr_cnt[type] + scpi_ofs;
+      }
+
+      descr_idx = si->offset;
     }
-    else if ( type == TYPE_ENUM ) {
+    else if ( TYPE_ENUM == type ) {
       PP_DATA_ENUM *d = &item->data.data_enum;
       char *buf = calloc( 1024, 1 );
       StringItem *si;
@@ -637,25 +644,24 @@ int save_var_file( DataItem *head, char *szFilename )
       case TYPE_FLOAT:
       case TYPE_DOUBLE:
         data_cnt[type] += item->vec_items;
-        descr_cnt[type]++;
+        descr_cnt[type] += item->vec_items;
         break;
 
       case TYPE_STRING:
-        data_cnt[type] += sizeof(STRBUF) * item->vec_items;
-        descr_cnt[type]++;
-        break;
-
-      case kTypeConstString:
         {
           PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
-          data_cnt[type] +=  strlen( p->def_value ) +1;
-          descr_cnt[type]++;
+          size_t len = strlen( p->def_value ) +1;
+          descr_cnt[type] += len;
+
+          if( TYPE_CONST != flags ) {
+            data_cnt[type] += sizeof(STRBUF) * item->vec_items;
+          }
         }
         break;
 
       case TYPE_ENUM:
         if( incr_descr ) {
-          descr_cnt[type] += 3* item->data.data_enum.cnt +1;
+          descr_cnt[type] += 3* item->data.data_enum.cnt +2;
         }
         data_cnt[type] += item->vec_items;
         break;
@@ -663,19 +669,21 @@ int save_var_file( DataItem *head, char *szFilename )
       default:
         UNHANDLED_CASE( type );
     }
-    
   }
 
   fputs( "\n};\n\n", fp );
 
-  save_descr_int( fp, head, "g_descr_int16", TYPE_INT16 );
-  save_data_int( fp, head, "g_data_int16", TYPE_INT16 );
+  save_data_int( fp, head, "g_descr_int16", TYPE_INT16, 1 );
+  save_data_int( fp, head, "g_data_int16", TYPE_INT16, 0 );
 
-  save_descr_int( fp, head, "g_descr_int32", TYPE_INT32 );
-  save_data_int( fp, head, "g_data_int32", TYPE_INT32 );
+  save_data_int( fp, head, "g_descr_int32", TYPE_INT32, 1 );
+  save_data_int( fp, head, "g_data_int32", TYPE_INT32, 0 );
 
-  save_data_float( fp, head, "g_data_float", TYPE_FLOAT );
-  save_data_float( fp, head, "g_data_double", TYPE_DOUBLE );
+  save_data_int( fp, head, "g_descr_float", TYPE_FLOAT, 1 );
+  save_data_int( fp, head, "g_data_float", TYPE_FLOAT, 0 );
+
+  save_data_int( fp, head, "g_descr_double", TYPE_DOUBLE, 1 );
+  save_data_int( fp, head, "g_data_double", TYPE_DOUBLE, 0 );
 
   save_data_string( fp, head, "g_data_string", TYPE_STRING );
   save_data_const_string( fp, head, "g_data_const_string", TYPE_STRING );
@@ -692,60 +700,32 @@ int save_var_file( DataItem *head, char *szFilename )
   return nRet;
 }
 
-int  save_descr_int( FILE *fp, DataItem *head, char const *name, int type ) {
+/*** save_data_int ***************************************************/
+/**
+ *   Save data or descriptor of integeral (int16,int32,float/double) variabes.
+ *
+ *   Writes the data of the variables to the file pointer.
+ *   If descr_flag is set, then the content of the data items
+ *   is always written to the file. When descr_flag is unset (= 0)
+ *   then the #pragma init_data specifies if the data content
+ *   is written to the file. This is useful to reduce flash space
+ *   in embedded devices. The #pragma init_data on is useful for debugging.
+ *
+ *   @param fp         file pointer
+ *   @param head       poiter to head of data items (aka variables)
+ *   @param name       variable name
+ *   @param type       data type of the data items
+ *   @param descr_flag this flag tells if a descriptor or the data
+ *                       of the variables show be written to fp
+ */
+
+int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int descr_flag ) {
   int i = 1;
+  int init_data;
+  int data_cnt = 0;
   char const *ztype;
   char const *zfmt;
-  DataItem *item;
-
-  switch( type ) {
-
-    case TYPE_INT16:
-      ztype = "DATA_S16";
-      zfmt = "  { %d, %d, %d }";
-      break;
-
-    case TYPE_INT32:
-      ztype = "DATA_S32";
-      zfmt = "  { %d, %d, %d }";
-      break;
-
-    default:
-      log_printf( LogErr, "INT: Type: %d not supported", type );
-      return -1;
-  }
-
-  fprintf( fp, "%s const %s[] = {\n", ztype, name );
-  LL_FOREACH( head, item ) {
-    int len;
-    char *spaces;
-    PP_DATA_INT *data = &item->data.data_int;
-
-    if((item->type & TYPE_MASK) != type ) {
-      continue;
-    }
-
-    len = strlen( item->hnd );
-    spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
-
-    if( i != 1 ) {
-      fputs( ",\n", fp );
-    }
-
-    fprintf(fp, "  /* %s%s */", item->hnd, spaces );
-    fprintf( fp, zfmt, data->def_value, data->min, data->max );
-
-    i++;
-  }
-  fputs( "\n};\n\n", fp );
-
-  return 0;
-}
-
-int  save_data_int( FILE *fp, DataItem *head, char const *name, int type ) {
-  int i = 1;
-  char const *ztype;
-  char const *zfmt;
+  char const *zmod = (descr_flag) ? "const" : "";
   DataItem *item;
 
   switch( type ) {
@@ -759,60 +739,6 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type ) {
       zfmt = "  { %d, %d, %d }";
       break;
 
-    default:
-      log_printf( LogErr, "Type: %d not supported", type );
-      return -1;
-  }
-
-  fprintf( fp, "%s %s[] = {\n", ztype, name );
-  LL_FOREACH( head, item ) {
-    int len;
-    char *spaces;
-    PP_DATA_INT *data = &item->data.data_int;
-
-    if((item->type & TYPE_MASK) != type ) {
-      continue;
-    }
-
-    len = strlen( item->hnd );
-    spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
-
-    if( i != 1 ) {
-      fputs( ",\n", fp );
-    }
-
-    fprintf(fp, "  /* %s%s */", item->hnd, spaces );
-    for( int j = 0; j < item->vec_items; j++ ) {
-      if( j > 0 ) {
-        fputs( ",\n", fp );
-        spaces = srepeat( ' ', 10 + s_Stats.max_var_hnd_len );
-        fputs( spaces, fp );
-      }
-
-      fprintf( fp, zfmt, data->def_value, data->min, data->max );
-    }
-
-    i++;
-  }
-
-  if( 1 == i ) {
-    // No int16/int32 item was declared.
-    // Emit a 0 value. This prohibts a warning from the compiler.
-    fputs( "  { 0 }", fp );
-  }
-
-  fputs( "\n};\n\n", fp );
-
-  return 0;
-}
-
-int  save_data_float( FILE *fp, DataItem *head, char const *name, int type ) {
-  int i = 1;
-  char const *ztype;
-  char const *zfmt;
-  DataItem *item;
-
-  switch( type ) {
     case TYPE_FLOAT:
       ztype = "DATA_F32";
       zfmt = "  { %f, %f, %f }";
@@ -824,17 +750,31 @@ int  save_data_float( FILE *fp, DataItem *head, char const *name, int type ) {
       break;
 
     default:
-      log_printf( LogErr, "FLOAT: Type: %d not supported", type );
+      log_printf( LogErr, "%s:%d Type: %d not supported", __FILE__, __LINE__, type );
       return -1;
   }
 
-  fprintf( fp, "%s %s[] = {\n", ztype, name );
+  init_data = descr_flag || s_Cfg.init_data;
+  if( init_data ) {
+    fprintf( fp, "%s %s %s[] = {\n", ztype, zmod, name );
+  }
+  else
+  {
+    fprintf( fp, "%s %s[", ztype, name );
+  }
+
   LL_FOREACH( head, item ) {
     int len;
     char *spaces;
-    PP_DATA_DOUBLE *data = &item->data.data_double;
+    PP_DATA_INT    *data_int    = &item->data.data_int;
+    PP_DATA_DOUBLE *data_double = &item->data.data_double;
 
     if((item->type & TYPE_MASK) != type ) {
+      continue;
+    }
+
+    if( !init_data ) {
+      data_cnt += item->vec_items;
       continue;
     }
 
@@ -853,19 +793,36 @@ int  save_data_float( FILE *fp, DataItem *head, char const *name, int type ) {
         fputs( spaces, fp );
       }
 
-      fprintf( fp, zfmt, data->def_value, data->min, data->max );
+      switch( type ) {
+        case TYPE_INT16:
+        case TYPE_INT32:
+          fprintf( fp, zfmt, data_int->def_value, data_int->min, data_int->max );
+          break;
+
+        case TYPE_FLOAT:
+        case TYPE_DOUBLE:
+          fprintf( fp, zfmt, data_double->def_value, data_double->min, data_double->max );
+          break;
+      }
     }
 
     i++;
   }
 
-  if( 1 == i ) {
-    // No float/double item was declared.
-    // Emit a 0 value. This prohibts a warning from the compiler.
-    fputs( "  { 0 }", fp );
+  if( init_data ) {
+    if( 1 == i ) {
+      // No item was declared.
+      // Emit a 0 value. This prohibts a warning from the compiler.
+      fputs( "  { 0, 0, 0 }", fp );
+    }
+    fputs( "\n};\n\n", fp );
   }
-
-  fputs( "\n};\n\n", fp );
+  else {
+    // No item was declared
+    // Emit an array of size 1. This prohibits a warning from the compiler.
+    fprintf( fp, "%d];\n\n", (0 == data_cnt) ? 1 : data_cnt );
+  }
+  
 
   return 0;
 }
@@ -875,6 +832,8 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
   int i = 1;
   char const *ztype;
   DataItem *item;
+  int init_data;
+  int data_cnt = 0;
 
   switch( type ) {
     case TYPE_STRING:
@@ -886,13 +845,27 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
       return -1;
   }
 
-  fprintf( fp, "%s %s[] = {\n", ztype, name );
+  init_data = s_Cfg.init_data;
+  if( init_data ) {
+    fprintf( fp, "%s %s[] = {\n", ztype, name );
+  }
+  else
+  {
+    fprintf( fp, "%s %s[", ztype, name );
+  }
+
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
     U16 type = item->type & TYPE_MASK;
     U16 isConst = (item->type & TYPE_FLAG) & TYPE_CONST;
+
     if( type != TYPE_STRING || (type == TYPE_STRING && isConst)) {
+      continue;
+    }
+
+    data_cnt += sizeof(STRBUF) * item->vec_items;
+    if( 0 == init_data ) {
       continue;
     }
 
@@ -908,16 +881,31 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
       }
 
       for( size_t k = 0; k < sizeof(STRBUF); k++ ) {
+        char c = data->def_value[k];
         if( k > 0 ) {
           fputs( ", ", fp );
         }
-        fprintf( fp, "0x%02x", data->def_value[k] );
+
+        if( isascii( c )) {
+          fprintf( fp, "%c", c );
+        }
+        else{
+          fprintf( fp, "%#x", c );
+        }
       }
     }
 
     i++;
   }
-  fputs( "\n};\n\n", fp );
+
+  if( init_data ) {
+    fputs( "\n};\n\n", fp );
+  }
+  else {
+    // No item was declared
+    // Emit an array of size 1. This prohibits a warning from the compiler.
+    fprintf( fp, "%d];\n", (0 == data_cnt) ? 1 : data_cnt );
+  }
 
   return 0;  
 }
@@ -939,6 +927,7 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
 
   fprintf( fp, "%s %s[] = {\n", ztype, name );
 
+  /* Write SCPI strings first. */
   LL_FOREACH( head, item ) {
     char *s = item->scpi;
 
@@ -954,26 +943,26 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
     fputs( "0,\n", fp );
   }
 
-
+  /* Write initial values of strings and const strings  */
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
     U16 type = item->type & TYPE_MASK;
-    U16 isConst = (item->type & TYPE_FLAG) & TYPE_CONST;
-    if( type != TYPE_STRING || (type == TYPE_STRING && !isConst)) {
+    if( type != TYPE_STRING ) {
       continue;
     }
 
     if( i != 1 ) {
-      fputs( ", 0x00,\n", fp );
+      fputs( ", 0,\n", fp );
     }
 
     fprintf(fp, "  /* %s */\n  ", item->hnd );
-    for( int j = 0; j < item->vec_items; j++ ) {
+    /* We only need one value in the descriptor. */
+    for( int j = 0; j < 1; j++ ) {
       int k;
 
       if( j > 0 ) {
-        fputs( ",\n  ", fp );
+        fputs( ", 0,\n  ", fp );
       }
 
       k = 0;
@@ -986,16 +975,25 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
           fprintf( fp, "'%c'", *p );
         }
         else {
-          fprintf( fp, "0x%02x", *p );
+          fprintf( fp, "%#x", *p );
         }
       }
     }
 
     i++;
   }
-  fputs( ", 0x00\n};\n\n", fp );
+  fputs( ", 0\n};\n\n", fp );
 
   return 0;  
+}
+
+int enum_get_def( PP_DATA_ENUM const *data ) {
+  ENUM_MBR_DESC *mbr = data->items;
+
+  for( int k = 0; k < data->def_mbr; k++ ) {
+    mbr = mbr->next;
+  }
+  return mbr->value;
 }
 
 int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
@@ -1003,6 +1001,8 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
   int i = 1;
   char const *ztype;
   DataItem *item;
+  int init_data = s_Cfg.init_data;
+  int data_cnt = 0;
 
   switch( type ) {
     case TYPE_ENUM:
@@ -1014,11 +1014,22 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
       return -1;
   }
 
-  fprintf( fp, "%s %s[] = {\n", ztype, name );
+  if( init_data ) {
+    fprintf( fp, "%s %s[] = {\n", ztype, name );
+  }
+  else {
+    fprintf( fp, "%s %s[", ztype, name );
+  }
+
   LL_FOREACH( head, item ) {
     PP_DATA_ENUM *data = &item->data.data_enum;
 
     if((item->type & TYPE_MASK) != type ) {
+      continue;
+    }
+
+    data_cnt += item->vec_items;
+    if( !init_data ) {
       continue;
     }
 
@@ -1028,21 +1039,24 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
 
     fprintf(fp, "  /* %s */\n  ", item->hnd );
     for( int j = 0; j < item->vec_items; j++ ) {
-      ENUM_MBR_DESC *mbr = data->items;
+      int enm_def = enum_get_def( data );
 
       if( j > 0 ) {
         fprintf( fp, ", " );
       }
 
-      for( int k = 0; k < data->def_mbr; k++ ) {
-        mbr = mbr->next;
-      }
-      fprintf(fp, "%d", mbr->value );
+      fprintf(fp, "%d", enm_def );
     }
 
     i++;
   }
-  fputs( "\n};\n\n", fp );
+  
+  if( init_data ) {
+    fputs( "\n};\n\n", fp );
+  }
+  else {
+    fprintf( fp, "%d];\n", data_cnt );
+  }
 
   return 0;
 }
@@ -1098,10 +1112,11 @@ int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type )
       size_t len = strlen( mbr->hnd );
       char *spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
       if( j == 0 ) {
-        fprintf(fp, "%d, ", data->cnt );
+        int def_val = enum_get_def( data );
+        fprintf(fp, "%d, %d,\n    ", def_val, data->cnt );
       }
       else {
-        fprintf(fp, ",\n     " );  
+        fprintf(fp, ",\n    " );  
       }
       fprintf(fp, "%s,%s % 4d, % 4d", mbr->hnd, spaces, mbr->value, -1 );
       mbr = mbr->next;
@@ -1169,24 +1184,32 @@ enum {
 
   fputs( "VC_DATA g_var_data = {\n", fp );
   fprintf( fp, "  g_vars,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                ""
                "  g_descr_int16,\n"
-               "  %ld,\n"
-                "  g_data_int16,\n"
-               "  %ld,\n"
+               "  %zu,\n"
+               "  g_data_int16,\n"
+               "  %zu,\n"
                "  g_descr_int32,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_data_int32,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_data_string,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_data_const_string,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_data_enum,\n"
-               "  %ld,\n"
+               "  %zu,\n"
                "  g_enum_mbr,\n"
-               "  %ld\n"
+               "  %zu,\n"
+               "  g_descr_float,\n"
+               "  %zu,\n"
+               "  g_data_float,\n"
+               "  %zu,\n"
+               "  g_descr_double,\n"
+               "  %zu,\n"
+               "  g_data_double,\n"
+               "  %zu,\n"
                "};\n",
                cnt_total,
                cnt_descr[TYPE_INT16],
@@ -1198,7 +1221,13 @@ enum {
                cnt_data[kTypeConstString],
 
                cnt_data[TYPE_ENUM],
-               cnt_descr[kTypeEnumMbr]
+               cnt_descr[kTypeEnumMbr],
+
+               cnt_descr[TYPE_FLOAT],
+               cnt_data[TYPE_FLOAT],
+
+               cnt_descr[TYPE_DOUBLE],
+               cnt_data[TYPE_DOUBLE]
          );
     return 0;
 }
@@ -1221,7 +1250,7 @@ static int map_search( Map_t const *map, size_t n, char const *needle )
  *
  *
  */
-int  GetType( char *pType , int *pValue )
+int  get_type( char *pType , int *pValue )
 {
   static Map_t Types[] = {
 
@@ -1276,7 +1305,7 @@ int  get_vector( char *name, int *value )
  *
  *
  */
-int  GetAccess( char *pAccess, int *pValue)
+int  get_access( char *pAccess, int *pValue)
 {
   static Map_t Access[] = {
       {"REQ_ADMIN", REQ_ADMIN}
@@ -1316,7 +1345,7 @@ int  GetAccess( char *pAccess, int *pValue)
  *
  *
  */
-int  GetStorage( char * pStorage, int *pValue)
+int  get_storage( char * pStorage, int *pValue)
 {
   static Map_t Storage[] = {
       {"RAM_VOLATILE", RAM_VOLATILE},
@@ -1506,16 +1535,17 @@ int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
   for( int i = 0; i < enm->cnt; i++ ) {
     int n;
     
-    #if 0
-    // Don't mark the default value.
-    // This would lead to different enum mbr descriptors
-    // which is not necessary, since the default value
-    // is stored in the data.
+    // Include the default value into the descriptor.
+    // This leads to different descriptors for
+    // enums that are mostly identical and where some
+    // space could be saved.
+    // But excluding the default value would require
+    // to store the default values somewhere else which
+    // I don't want to. The overhead is - I hope - neglegible.
     if( mbr->value == enm->def_mbr ) {
       *s = ':';
       s++;
     }
-    #endif
 
     n = snprintf( s, rest, "%s=%d", mbr->hnd, mbr->value );
     if( n <= 0 ) {
@@ -1547,7 +1577,7 @@ int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
     mbr = mbr->next;
   }
 
-  return s - BufSize;
+  return (int)(s - BufSize);
 }
 
 static int find_opt( char const *p, char const **opt_list, char **endp, int *idx ) {
@@ -1588,8 +1618,8 @@ static int find_opt( char const *p, char const **opt_list, char **endp, int *idx
 }
 
 void handle_pragma( char const *line, LOC const *loc ) {
-  enum { kSection, kPrefix };
-  static char const* Pragmas[] = { "section", "prefix", NULL };
+  enum { kSection, kPrefix, kInitData };
+  static char const* Pragmas[] = { "section", "prefix", "init_data", NULL };
 
   char *endp = NULL;
   int idx = -1;
@@ -1617,8 +1647,11 @@ void handle_pragma( char const *line, LOC const *loc ) {
       s_Cfg.prefix_len = strlen( s_Cfg.prefix );
       break;
 
+    case kInitData:
+      s_Cfg.init_data = (0 == strcmp( endp, "on")) ? 1 : 0;
+      break;
+
     default:
       UNHANDLED_CASE( idx );
-
   }
 }
