@@ -241,7 +241,7 @@ int vc_get_access( HND hnd, int chan ) {
  * 
  *   @param hnd     Variable-handle
  */
-int vc_get_datatype( HND ) {
+int vc_get_datatype( HND hnd ) {
 	VAR_DESC const *var;
 
 	assert( s_vc_data );
