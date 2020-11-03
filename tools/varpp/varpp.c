@@ -136,10 +136,10 @@ typedef struct {
 } Map_t;
 
 
-static int  GetType( char *, int *);
+static int  get_type( char *, int *);
 static int  get_vector( char *, int *);
-static int  GetAccess( char *, int *);
-static int  GetStorage( char *, int *);
+static int  get_access( char *, int *);
+static int  get_storage( char *, int *);
 
 enum {
   line_len  = 255,
@@ -430,7 +430,7 @@ int read_csv_file( DataItem **head, char * szFilename)
     }
 
     log_printf( LogDebug, "Process %s with type %s", cols[ColHnd], cols[ColType] );
-    int ret = GetType( cols[ColType], &item->type );
+    int ret = get_type( cols[ColType], &item->type );
     if ( ret ) {
       log_printf( LogInfo, "unknown datatype: %s", cols[ColType] );
       free( item );
@@ -441,8 +441,8 @@ int read_csv_file( DataItem **head, char * szFilename)
     s_nTypeCnt[(item->type >> 8) & 0xf]++;
 
     get_vector( cols[ColVector], &item->vec_items );
-    GetStorage( cols[ColStorage], &item->storage );
-    GetAccess( cols[ColAccess], &item->acc_rights );
+    get_storage( cols[ColStorage], &item->storage );
+    get_access( cols[ColAccess], &item->acc_rights );
 
     if( item->vec_items > 1 ) {
       item->type |= TYPE_VECTOR;
@@ -1250,7 +1250,7 @@ static int map_search( Map_t const *map, size_t n, char const *needle )
  *
  *
  */
-int  GetType( char *pType , int *pValue )
+int  get_type( char *pType , int *pValue )
 {
   static Map_t Types[] = {
 
@@ -1305,7 +1305,7 @@ int  get_vector( char *name, int *value )
  *
  *
  */
-int  GetAccess( char *pAccess, int *pValue)
+int  get_access( char *pAccess, int *pValue)
 {
   static Map_t Access[] = {
       {"REQ_ADMIN", REQ_ADMIN}
@@ -1345,7 +1345,7 @@ int  GetAccess( char *pAccess, int *pValue)
  *
  *
  */
-int  GetStorage( char * pStorage, int *pValue)
+int  get_storage( char * pStorage, int *pValue)
 {
   static Map_t Storage[] = {
       {"RAM_VOLATILE", RAM_VOLATILE},
