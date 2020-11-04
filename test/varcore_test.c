@@ -72,6 +72,11 @@
     CU_assertImplementation(((actual) == (expected)), __LINE__, condition, __FILE__, "", CU_FALSE); \
   } while(0)
 
+
+#ifndef countof
+# define countof(x) (sizeof(x)/sizeof(x[0]))
+#endif
+
 /* Suite initialization/cleanup functions */
 static int suite_init(void) {
   vc_init(&g_var_data);
@@ -355,7 +360,7 @@ static void wr16_chan(void)
   ErrCode ret;
 
   for( int i = 0; i < VEC_LEM; i++ ) {
-    temp[i] = -99;
+    temp[i] = -71;
   }
 
   ret = vc_as_int16( VAR_TP1, VarWrite, &temp[0], 0, REQ_PRG );
@@ -363,7 +368,7 @@ static void wr16_chan(void)
   temp[0] = 99;
   ret = vc_as_int16( VAR_TP1, VarRead, &temp[0], 0, REQ_PRG );
   CU_ASSERT_EQUAL16( ret, kErrNone );
-  CU_ASSERT_EQUAL16( temp[0], -99 );
+  CU_ASSERT_EQUAL16( temp[0], -71 );
 
 
   temp[VEC_LEM-1] = 98;
@@ -427,12 +432,136 @@ static void as_str16(void)
   CU_ASSERT_EQUAL( ret, kErrInvalidValue );
 }
 
+static void wr16_min_max(void)
+{
+  S16 Min;
+  S16 Max;
+  S16 Mn;
+  S16 Mx;
+  ErrCode ret;
+
+  typedef struct {
+    S16      offset;
+    ErrCode  err;
+  } test_spec_t;
+
+  test_spec_t test_min[] = {
+    {  0, kErrNone },
+    { +1, kErrNone },
+    { -1, kErrLowerLimit },
+    {  0, kErrLowerLimit },
+  };
+
+  test_spec_t test_max[] = {
+    {  0, kErrNone },
+    { +1, kErrUpperLimit },
+    { -1, kErrNone },
+    {  0, kErrUpperLimit },
+  };
+
+  ret = vc_get_min( VAR_IAB, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  ret = vc_get_max( VAR_IAB, (U8*)&Max, VEC_LEM-1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  CU_ASSERT( Min < 0 );
+  CU_ASSERT( Max > 0 );
+
+  test_min[3].offset = 0x8000 - Min;
+  test_max[3].offset = 0x7fff - Max;
+
+  for( size_t i = 0; i < countof(test_min); i++) {
+    test_spec_t *t = &test_min[i];
+    Mn = Min + t->offset;
+    ret = vc_as_int16( VAR_IAB, VarWrite, &Mn, 0, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, t->err );
+  }
+  
+  for( size_t i = 0; i < countof(test_max); i++) {
+    test_spec_t *t = &test_max[i];
+    Mx = Max + t->offset;
+    ret = vc_as_int16( VAR_IAB, VarWrite, &Mx, VEC_LEM-1, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, t->err );
+  }
+}
+
+static void wr16_clip(void)
+{
+  S16 TP1;
+  S16 Min;
+  S16 Max;
+  S16 Mn;
+  S16 Mx;
+  ErrCode ret;
+
+  typedef struct {
+    S16      offset;
+    S16      exp_value;
+    ErrCode  err;
+  } test_spec_t;
+
+  test_spec_t test_min[] = {
+    {  0, 0, kErrNone },
+    { +1, 0, kErrNone },
+    { -1, 0, kErrNone }
+  };
+
+  test_spec_t test_max[] = {
+    {  0, 0, kErrNone },
+    { +1, 0, kErrNone },
+    { -1, 0, kErrNone }
+  };
+
+  ret = vc_get_min( VAR_TP1, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  ret = vc_get_max( VAR_TP1, (U8*)&Max, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  CU_ASSERT( Min < 0 );
+  CU_ASSERT( Max > 0 );
+
+  test_min[0].exp_value = Min;
+  test_min[1].exp_value = Min+1;
+  test_min[2].exp_value = Min;
+
+  test_max[0].exp_value = Max;
+  test_max[1].exp_value = Max;
+  test_max[2].exp_value = Max-1;
+
+  for( size_t i = 0; i < countof(test_min); i++) {
+    test_spec_t *t = &test_min[i];
+    Mn = Min + t->offset;
+    ret = vc_as_int16( VAR_TP1, VarWrite, &Mn, 0, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, t->err );
+
+    ret = vc_as_int16( VAR_TP1, VarRead, &TP1, 0, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, kErrNone );
+    CU_ASSERT_EQUAL16( TP1, t->exp_value );
+  }
+  
+  for( size_t i = 0; i < countof(test_max); i++) {
+    test_spec_t *t = &test_max[i];
+    Mx = Max + t->offset;
+    // printf("%d: %2d   %d    %d/%x\n", i, t->offset, t->exp_value, t->err, t->err );
+    ret = vc_as_int16( VAR_TP1, VarWrite, &Mx, 1, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, t->err );
+
+    ret = vc_as_int16( VAR_TP1, VarRead, &TP1, 1, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, kErrNone );
+    CU_ASSERT_EQUAL16( TP1, t->exp_value );
+  }
+}
+
 static CU_TestInfo tests_rdwr16[] = {
-  { "RD", rd16 },
-  { "WR", wr16 },
-  { "RD chan x", rd16_chan },
-  { "WR chan x", wr16_chan },
-  { "as string", as_str16 },
+  { "RD INT16", rd16 },
+  { "WR INT16", wr16 },
+  { "RD INT16 chan x", rd16_chan },
+  { "WR INT16 chan x", wr16_chan },
+  { "as string INT16", as_str16 },
+  { "WR INT16 min/max", wr16_min_max },
+  { "WR INT16 clip", wr16_clip },
 	CU_TEST_INFO_NULL,
 };
 
