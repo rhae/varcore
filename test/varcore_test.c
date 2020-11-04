@@ -618,10 +618,131 @@ static void as_str_f32(void)
   CU_ASSERT_DOUBLE_EQUAL( NCUR, 10, .001 );
 }
 
+static void wr_f32_min_max(void)
+{
+  F32 Min;
+  F32 Max;
+  F32 Mn;
+  F32 Mx;
+  ErrCode ret;
+  HND hnd = VAR_CUR;
+
+  typedef struct {
+    F32      offset;
+    ErrCode  err;
+  } test_spec_t;
+
+  test_spec_t test_min[] = {
+    {  0, kErrNone },
+    { +1, kErrNone },
+    { -1, kErrLowerLimit }
+  };
+
+  test_spec_t test_max[] = {
+    {  0, kErrNone },
+    { +1, kErrUpperLimit },
+    { -1, kErrNone }
+  };
+
+  ret = vc_get_min( hnd, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  ret = vc_get_max( hnd, (U8*)&Max, VEC_LEM-1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  CU_ASSERT( Min < 0 );
+  CU_ASSERT( Max > 0 );
+
+  for( size_t i = 0; i < countof(test_min); i++) {
+    test_spec_t *t = &test_min[i];
+    Mn = Min + t->offset;
+    ret = vc_as_float( hnd, VarWrite, &Mn, 0, REQ_PRG );
+    CU_ASSERT_EQUAL( ret, t->err );
+  }
+  
+  for( size_t i = 0; i < countof(test_max); i++) {
+    test_spec_t *t = &test_max[i];
+    Mx = Max + t->offset;
+    ret = vc_as_float( hnd, VarWrite, &Mx, VEC_LEM-1, REQ_PRG );
+    CU_ASSERT_EQUAL( ret, t->err );
+  }
+}
+
+static void wr_f32_clip(void)
+{
+  F32 NMAX;
+  F32 Min;
+  F32 Max;
+  F32 Mn;
+  F32 Mx;
+  ErrCode ret;
+  HND hnd = VAR_CUR_NMAX;
+
+  typedef struct {
+    F32      offset;
+    F32      exp_value;
+    ErrCode  err;
+  } test_spec_t;
+
+  test_spec_t test_min[] = {
+    {  0, 0, kErrNone },
+    { +1, 0, kErrNone },
+    { -1, 0, kErrNone }
+  };
+
+  test_spec_t test_max[] = {
+    {  0, 0, kErrNone },
+    { +1, 0, kErrNone },
+    { -1, 0, kErrNone }
+  };
+
+  ret = vc_get_min( hnd, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  ret = vc_get_max( hnd, (U8*)&Max, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  CU_ASSERT( Min < 0 );
+  CU_ASSERT( Max > 0 );
+
+  test_min[0].exp_value = Min;
+  test_min[1].exp_value = Min+1;
+  test_min[2].exp_value = Min;
+
+  test_max[0].exp_value = Max;
+  test_max[1].exp_value = Max;
+  test_max[2].exp_value = Max-1;
+
+  for( size_t i = 0; i < countof(test_min); i++) {
+    test_spec_t *t = &test_min[i];
+    Mn = Min + t->offset;
+    ret = vc_as_float( hnd, VarWrite, &Mn, 0, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, t->err );
+
+    ret = vc_as_float( hnd, VarRead, &NMAX, 0, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, kErrNone );
+    CU_ASSERT_DOUBLE_EQUAL( NMAX, t->exp_value, 0.1 );
+  }
+  
+  for( size_t i = 0; i < countof(test_max); i++) {
+    test_spec_t *t = &test_max[i];
+    Mx = Max + t->offset;
+    // printf("%d: %2d   %d    %d/%x\n", i, t->offset, t->exp_value, t->err, t->err );
+    ret = vc_as_float( hnd, VarWrite, &Mx, 1, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, t->err );
+
+    ret = vc_as_float( hnd, VarRead, &NMAX, 1, REQ_PRG );
+    CU_ASSERT_EQUAL16( ret, kErrNone );
+    CU_ASSERT_DOUBLE_EQUAL( NMAX, t->exp_value, 0.1 );
+  }
+}
+
 static CU_TestInfo tests_rdwr_f32[] = {
-  { "RD", rd_f32 },
-  { "WR", wr_f32 },
-  { "as string", as_str_f32 },
+  { "RD",             rd_f32 },
+  { "WR",             wr_f32 },
+  { "as string",      as_str_f32 },
+  { "WR F32 min/max", wr_f32_min_max },
+  { "WR F32 clip",    wr_f32_clip },
 	CU_TEST_INFO_NULL,
 };
 
