@@ -245,14 +245,45 @@ static void wr32_chan(void)
   CU_ASSERT_EQUAL32( ret, kErrInvalidChan );
 }
 
+static void set_min_max() {
+  S16 Min;
+  S16 Max;
+  S16 Mn;
+  S16 Mx;
+  ErrCode ret;
+  HND hnd = VAR_TP1;
+
+  ret = vc_get_min( hnd, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  ret = vc_get_max( hnd, (U8*)&Max, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  Mn = Min -10;
+  ret = vc_set_min( hnd, (U8*)&Mn, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  
+  ret = vc_get_min( hnd, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  CU_ASSERT_EQUAL32( Min, Mn );
+
+  Mx = Max +10;
+  ret = vc_set_max( hnd, (U8*)&Mx, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  
+  ret = vc_get_max( hnd, (U8*)&Max, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  CU_ASSERT_EQUAL32( Max, Mx );
+}
 
 static CU_TestInfo tests_rdwr32[] = {
-  { "RD", rd32 },
-  { "WR", wr32 },
-  { "RD chan x", rd32_chan },
-  { "WR chan x", wr32_chan },
-  { "WR min/max", wr32_min_max },
-  { "WR clip", wr32_clip },
+  { "S32, RD",          rd32 },
+  { "S32, WR",           wr32 },
+  { "S32, RD chan x",    rd32_chan },
+  { "S32, WR chan x",    wr32_chan },
+  { "S32, WR min/max",   wr32_min_max },
+  { "S32, WR clip",      wr32_clip },
+  { "S32, SET MIN/MAX",  set_min_max },
 	CU_TEST_INFO_NULL,
 };
 

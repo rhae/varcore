@@ -245,5 +245,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req );
 
 ErrCode vc_get_min( HND, U8*, U16 );
 ErrCode vc_get_max( HND, U8*, U16 );
+ErrCode vc_set_min( HND, U8*, U16 );
+ErrCode vc_set_max( HND, U8*, U16 );
 
 int vc_dump_var( char *, U16, HND, U16 );

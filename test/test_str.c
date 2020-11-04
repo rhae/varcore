@@ -120,14 +120,45 @@ static void wr_str(void) {
   CU_ASSERT_STRING_EQUAL( S, "192.168.178.22" );
 }
 
+static void set_min_max() {
+  U16 T = 0;
+  ErrCode ret;
+  HND hnd = VAR_IDN;
+
+  ret = vc_get_min( hnd, 0, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidArg );
+
+  ret = vc_get_max( hnd, 0, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidArg );
+
+  ret = vc_set_min( hnd, 0, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidArg );
+
+  ret = vc_set_max( hnd, 0, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidArg );
+
+  ret = vc_get_min( hnd, (U8*)&T, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidType );
+
+  ret = vc_get_max( hnd, (U8*)&T, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidType );
+
+  ret = vc_set_min( hnd, (U8*)&T, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidType );
+
+  ret = vc_set_max( hnd, (U8*)&T, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidType );
+}
+
 static CU_TestInfo tests_rdwr_str[] = {
-  { "RD", rd_str },
-  { "WR", wr_str },
+  { "STR, RD", rd_str },
+  { "STR, WR", wr_str },
   #if 0
   { "RD chan x", rd16_chan },
   { "WR chan x", wr16_chan },
   { "as string", as_str16 },
   #endif
+  { "STR, SET MIN/MAX", set_min_max },
 	CU_TEST_INFO_NULL,
 };
 

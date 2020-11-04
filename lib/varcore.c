@@ -97,7 +97,7 @@ static int     vc_init_enum( VAR_DESC const *);
 static int     vc_init_string( VAR_DESC const *);
 
 static ErrCode vc_valid_enum( DESCR_ENUM const *, S16 );
-static ErrCode get_min_max( HND hnd, U8* val, U16 chan, int minmax );
+static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag );
 
 /* external variables
 ----------------------------------------------------------------------------*/
@@ -660,7 +660,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
  *   @param chan   Channel
  */
 ErrCode vc_get_min( HND hnd, U8* val, U16 chan ) {
-	return get_min_max( hnd, val, chan, 0 );
+	return rw_min_max( hnd, val, chan, 0 );
 }
 
 /*** vc_get_max ***********************************************************/
@@ -673,7 +673,33 @@ ErrCode vc_get_min( HND hnd, U8* val, U16 chan ) {
  *   @param chan   Channel
  */
 ErrCode vc_get_max( HND hnd, U8* val, U16 chan ) {
-	return get_min_max( hnd, val, chan, 1 );
+	return rw_min_max( hnd, val, chan, 1 );
+}
+
+/*** vc_get_min ***********************************************************/
+/**
+ *   Read minimum value of a variable of types:
+ *      TYPE_INT16, TYPE_INT32, TYPE_F32.
+ *
+ *   @param hnd    Variable handle
+ *   @param val    Pointer to value
+ *   @param chan   Channel
+ */
+ErrCode vc_set_min( HND hnd, U8* val, U16 chan ) {
+	return rw_min_max( hnd, val, chan, 2 );
+}
+
+/*** vc_set_min ***********************************************************/
+/**
+ *   Write maximum value of a variable of types:
+ *      TYPE_INT16, TYPE_INT32, TYPE_F32.
+ *
+ *   @param hnd    Variable handle
+ *   @param val    Pointer to value
+ *   @param chan   Channel
+ */
+ErrCode vc_set_max( HND hnd, U8* val, U16 chan ) {
+	return rw_min_max( hnd, val, chan, 3 );
 }
 
 /*** vc_dump_var *****************************************************/
@@ -1021,16 +1047,20 @@ static ErrCode vc_valid_enum( DESCR_ENUM const *dscr, S16 val ) {
  *   @param hnd    Variable handle
  *   @param val    Pointer to value
  *   @param chan   Channel
- *   @param minmax Flag, {0 -> minimum, !=0 -> maximum}
+ *   @param flag   Flag, {Bit 0: 0 -> minimum, 1 -> maximum,
+ *                        Bit 1: 0 -> read, 1 -> write }
  */
-static ErrCode get_min_max( HND hnd, U8* val, U16 chan, int minmax ) {
+static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag ) {
 	U16 type;
 
-	DATA_S16 const *dscr_s16;
-	DATA_S32 const *dscr_s32;
-	DATA_F32 const *dscr_f32;
+	DATA_S16 *data_s16;
+	DATA_S32 *data_s32;
+	DATA_F32 *data_f32;
 
 	VAR_DESC const *var;
+
+	int minmax = flag & 1;
+	int wr     = (flag & 2) >> 1;
 	
 	assert( s_vc_data );
 	assert( hnd < s_vc_data->var_cnt );
@@ -1039,9 +1069,9 @@ static ErrCode get_min_max( HND hnd, U8* val, U16 chan, int minmax ) {
 		return kErrInvalidArg;
 	}
 
-    var = get_var( hnd );
-    type = var->type & TYPE_MASK;
-    
+	var = get_var( hnd );
+	type = var->type & TYPE_MASK;
+
 	if( chan > 0 ) {
 		ErrCode ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
@@ -1051,18 +1081,36 @@ static ErrCode get_min_max( HND hnd, U8* val, U16 chan, int minmax ) {
 	
 	switch( type ) {
 		case TYPE_INT16:
-			dscr_s16 = &s_vc_data->data_s16[ var->data_idx + chan ];
-			*(S16*) val = (0 == minmax) ? dscr_s16->min : dscr_s16->max;
+			data_s16 = &s_vc_data->data_s16[ var->data_idx + chan ];
+			if( wr ) {
+				S16 *p = (0 == minmax) ? &data_s16->min : &data_s16->max;
+				*p = *(S16*)val;
+			}
+			else {
+				*(S16*) val = (0 == minmax) ? data_s16->min : data_s16->max;
+			}
 			break;
 
 		case TYPE_INT32:
-			dscr_s32 = &s_vc_data->data_s32[ var->data_idx + chan ];
-			*(S32*) val = (0 == minmax) ? dscr_s32->min : dscr_s32->max;
+			data_s32 = &s_vc_data->data_s32[ var->data_idx + chan ];
+			if( wr ) {
+				S32 *p = (0 == minmax) ? &data_s32->min : &data_s32->max;
+				*p = *(S32*)val;
+			}
+			else {
+				*(S32*) val = (0 == minmax) ? data_s32->min : data_s32->max;
+			}
 			break;
 
 		case TYPE_FLOAT:
-			dscr_f32 = &s_vc_data->data_f32[ var->data_idx + chan ];
-			*(F32*) val = (0 == minmax) ? dscr_f32->min : dscr_f32->max;
+			data_f32 = &s_vc_data->data_f32[ var->data_idx + chan ];
+			if( wr ) {
+				F32 *p = (0 == minmax) ? &data_f32->min : &data_f32->max;
+				*p = *(F32*)val;
+			}
+			else {
+				*(F32*) val = (0 == minmax) ? data_f32->min : data_f32->max;
+			}
 			break;
 
 		default:

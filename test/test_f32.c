@@ -240,12 +240,56 @@ static void wr_f32_clip(void)
   }
 }
 
+static void set_min_max() {
+  F32 Min;
+  F32 Max;
+  F32 Mn;
+  F32 Mx;
+  ErrCode ret;
+  HND hnd = VAR_CUR_NMAX;
+
+  ret = vc_get_min( hnd, 0, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidArg );
+
+  ret = vc_get_max( hnd, 0, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidArg );
+
+  ret = vc_set_min( hnd, 0, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidArg );
+
+  ret = vc_set_max( hnd, 0, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrInvalidArg );
+
+  ret = vc_get_min( hnd, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  ret = vc_get_max( hnd, (U8*)&Max, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  Mn = Min -10;
+  ret = vc_set_min( hnd, (U8*)&Mn, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  
+  ret = vc_get_min( hnd, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  CU_ASSERT_DOUBLE_EQUAL( Min, Mn, 0.1 );
+
+  Mx = Max +10;
+  ret = vc_set_max( hnd, (U8*)&Mx, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  
+  ret = vc_get_max( hnd, (U8*)&Max, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  CU_ASSERT_DOUBLE_EQUAL( Max, Mx, 0.1 );
+}
+
 static CU_TestInfo tests_rdwr_f32[] = {
-  { "RD",             rd_f32 },
-  { "WR",             wr_f32 },
-  { "as string",      as_str_f32 },
-  { "WR F32 min/max", wr_f32_min_max },
-  { "WR F32 clip",    wr_f32_clip },
+  { "F32, RD",           rd_f32 },
+  { "F32, WR",           wr_f32 },
+  { "F32, As string",    as_str_f32 },
+  { "F32, WR min/max",   wr_f32_min_max },
+  { "F32, WR clip",      wr_f32_clip },
+  { "F32, SET MIN/MAX",  set_min_max },
 	CU_TEST_INFO_NULL,
 };
 

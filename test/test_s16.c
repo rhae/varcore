@@ -317,14 +317,46 @@ static void wr16_clip(void)
   }
 }
 
+static void set_min_max() {
+  S16 Min;
+  S16 Max;
+  S16 Mn;
+  S16 Mx;
+  ErrCode ret;
+  HND hnd = VAR_TP1;
+
+  ret = vc_get_min( hnd, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  ret = vc_get_max( hnd, (U8*)&Max, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+
+  Mn = Min -10;
+  ret = vc_set_min( hnd, (U8*)&Mn, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  
+  ret = vc_get_min( hnd, (U8*)&Min, 0 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  CU_ASSERT_EQUAL16( Min, Mn );
+
+  Mx = Max +10;
+  ret = vc_set_max( hnd, (U8*)&Mx, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  
+  ret = vc_get_max( hnd, (U8*)&Max, 1 );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  CU_ASSERT_EQUAL16( Max, Mx );
+}
+
 static CU_TestInfo tests_rdwr16[] = {
-  { "RD INT16", rd16 },
-  { "WR INT16", wr16 },
-  { "RD INT16 chan x", rd16_chan },
-  { "WR INT16 chan x", wr16_chan },
-  { "as string INT16", as_str16 },
-  { "WR INT16 min/max", wr16_min_max },
-  { "WR INT16 clip", wr16_clip },
+  { "S16, RD",           rd16 },
+  { "S16, WR",           wr16 },
+  { "S16, RD chan x",    rd16_chan },
+  { "S16, WR chan x",    wr16_chan },
+  { "S16, AS string",    as_str16 },
+  { "S16, WR min/max",   wr16_min_max },
+  { "S16, WR clip",      wr16_clip },
+  { "S16, SET MIN/MAX",  set_min_max },
 	CU_TEST_INFO_NULL,
 };
 
