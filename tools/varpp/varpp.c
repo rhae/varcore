@@ -59,7 +59,7 @@
 #endif
 
 #ifndef UNHANDLED_CASE
-#  define UNHANDLED_CASE(x) log_printf( LogErr, "%s:%d Unhandled case %d", __FUNCTION__, __LINE__, x );
+#  define UNHANDLED_CASE(x) log_printf( LogErr, 0, "%s:%d Unhandled case %d", __FUNCTION__, __LINE__, x );
 #endif
 
 #ifndef countof
@@ -198,7 +198,7 @@ Config        s_Cfg;
 
 
 static int s_nVarCnt = 0;
-static int s_nTypeCnt[16] = { 0 };
+static int s_nTypeCnt[TYPE_LAST] = { 0 };
 
 typedef struct {
   S32 Major;
@@ -227,9 +227,9 @@ static void puts_version() {
 }
 
 static void print_cfg( Config *C ) {
-  log_printf(LogDebug, "Pragmas:");
-  log_printf(LogDebug, "  prefix     : %s", C->prefix );
-  log_printf(LogDebug, "  init_data  : %s", C->init_data ? "on" : "off" );
+  log_printf(LogDebug, 0, "Pragmas:");
+  log_printf(LogDebug, 0, "  prefix     : %s", C->prefix );
+  log_printf(LogDebug, 0, "  init_data  : %s", C->init_data ? "on" : "off" );
 }
 
 /**
@@ -279,8 +279,8 @@ int main( int argc, char **argv )
 
   realpath( argv[1], fname );
 
-  log_printf( LogInfo, "Input File:  %s", fname );
-  log_printf( LogInfo, "Output path: %s", get_path( path, fname ));
+  log_printf( LogInfo, 0, "Input File:  %s", fname );
+  log_printf( LogInfo, 0, "Output path: %s", get_path( path, fname ));
 
   res = read_csv_file( &s_Data, fname );
   if( res == 0 ) {
@@ -373,7 +373,7 @@ int read_csv_file( DataItem **head, char * szFilename)
   res = 0;
   fp = fopen( szFilename, "r" );
   if( fp == NULL ) {
-    log_printf( LogErr, strerror( errno ));
+    log_printf( LogErr, 0, strerror( errno ));
     return -1;
   }
 
@@ -427,21 +427,21 @@ int read_csv_file( DataItem **head, char * szFilename)
 
     StringItem *si = strpool_Add( &s_StrPools[spScpi], cols[ColScpi], 0 );
     if( !si && !is_hidden_scpi(cols[ColScpi])) {
-      log_printf( LogErr, "SCPI %s already in use.", cols[ColScpi] );
+      log_printf( LogErr, 0, "SCPI %s already in use.", cols[ColScpi] );
       res = -2;
       break;
     }
 
-    log_printf( LogDebug, "Process %s with type %s", cols[ColHnd], cols[ColType] );
+    log_printf( LogDebug, 0, "Process %s with type %s", cols[ColHnd], cols[ColType] );
     int ret = get_type( cols[ColType], &item->type );
     if ( ret ) {
-      log_printf( LogInfo, "unknown datatype: %s", cols[ColType] );
+      log_printf( LogInfo, 0, "unknown datatype: %s", cols[ColType] );
       free( item );
       continue;
     }
 
     s_nVarCnt++;
-    s_nTypeCnt[(item->type >> 8) & 0xf]++;
+    s_nTypeCnt[item->type & TYPE_MASK]++;
 
     get_vector( cols[ColVector], &item->vec_items );
     get_storage( cols[ColStorage], &item->storage );
@@ -451,7 +451,10 @@ int read_csv_file( DataItem **head, char * szFilename)
       item->type |= TYPE_VECTOR;
     }
 
-    // uFlags = nType | nStorage | nAccess | nVector;
+    if( item->acc_rights & (FLAG_LIMIT | FLAG_CLIP)) {
+
+      log_printf( LogWarn, loc_cur(), "%s: FLAG_LIMIT and FLAG_CLIP together do not make sense.", cols[ColScpi] );
+    }
 
     switch( item->type & TYPE_MASK ) {
       case TYPE_ACTION:
@@ -640,7 +643,7 @@ int save_var_file( DataItem *head, char *szFilename )
       serialize_enum( buf, 1024, d );
       si = strpool_Get( &s_EnumPool, buf );
       if( !si ) {
-        log_printf( LogErr, "enum not found in pool.");
+        log_printf( LogErr, 0, "enum not found in pool.");
         continue;
       }
 
@@ -776,7 +779,7 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
       break;
 
     default:
-      log_printf( LogErr, "%s:%d Type: %d not supported", __FILE__, __LINE__, type );
+      log_printf( LogErr, 0, "%s:%d Type: %d not supported", __FILE__, __LINE__, type );
       return -1;
   }
 
@@ -867,7 +870,7 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
       break;
 
     default:
-      log_printf( LogErr, "STRING: Type: %d not supported", type );
+      log_printf( LogErr, 0, "STRING: Type: %d not supported", type );
       return -1;
   }
 
@@ -947,7 +950,7 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
       break;
 
     default:
-      log_printf( LogErr, "STRING: Type: %d not supported", type );
+      log_printf( LogErr, 0, "STRING: Type: %d not supported", type );
       return -1;
   }
 
@@ -1036,7 +1039,7 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
       break;
 
     default:
-      log_printf( LogErr, "ENUM: Type: %d not supported", type );
+      log_printf( LogErr, 0, "ENUM: Type: %d not supported", type );
       return -1;
   }
 
@@ -1101,7 +1104,7 @@ int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type )
       break;
 
     default:
-      log_printf( LogErr, "ENUM: Type: %d not supported", type );
+      log_printf( LogErr, 0, "ENUM: Type: %d not supported", type );
       return -1;
   }
 
@@ -1119,7 +1122,7 @@ int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type )
     serialize_enum( buf, kBufSize, data );
     si = strpool_Get( &s_EnumPool, buf );
     if( !si ) {
-      log_printf( LogErr, "[%s:%d] enum for handle %s not found in enum pool.",
+      log_printf( LogErr, 0, "[%s:%d] enum for handle %s not found in enum pool.",
         __FUNCTION__, __LINE__, item->hnd );
       return -1;
     }
@@ -1404,7 +1407,7 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   StringItem *si;
 
   if( col_cnt < colModifier ) {
-    log_printf( LogErr, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
+    log_printf( LogErr, 0, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
     return -1;
   }
 
@@ -1433,7 +1436,7 @@ static int parse_int( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   };
 
   if( col_cnt < colDefault ) {
-    log_printf( LogErr, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
+    log_printf( LogErr, 0, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
     return -1;
   }
 
@@ -1455,7 +1458,7 @@ static int parse_double( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   };
 
   if( col_cnt < colDefault ) {
-    log_printf( LogErr, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
+    log_printf( LogErr, 0, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
     return -1;
   }
 
@@ -1489,7 +1492,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   };
 
   if( col_cnt < colFirstMbr ) {
-    log_printf( LogErr, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
+    log_printf( LogErr, 0, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
     return -1;
   }
 
@@ -1528,7 +1531,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
       errno = 0;
       mbr->value = strtol( s, 0, 0 );
       if( errno != 0 ) {
-        log_printf( LogErr, "Invalid number for enum member %s in variable %s", mbr->hnd, CSV_COL(cols, 0 ));
+        log_printf( LogErr, 0, "Invalid number for enum member %s in variable %s", mbr->hnd, CSV_COL(cols, 0 ));
       }
     }
 
@@ -1577,7 +1580,7 @@ int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
 
     n = snprintf( s, rest, "%s=%d", mbr->hnd, mbr->value );
     if( n <= 0 ) {
-      log_printf( LogErr, "%s: invalid length", __FUNCTION__ );
+      log_printf( LogErr, 0, "%s: invalid length", __FUNCTION__ );
       return 0;
     }
 
@@ -1591,7 +1594,7 @@ int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
     if( strlen(mbr->string) > 0 ) {
       n = snprintf( s, rest, "=%s", mbr->string );
       if( n <= 0 ) {
-        log_printf( LogErr, "%s: invalid length", __FUNCTION__ );
+        log_printf( LogErr, 0, "%s: invalid length", __FUNCTION__ );
         return 0;
       }
       s += n;
@@ -1657,7 +1660,7 @@ void handle_pragma( char const *line, LOC const *loc ) {
     const int buf_size = PATH_MAX * 1.5;
     char *buf = (char*)calloc( buf_size, sizeof(char));
     loc_fmt( buf, buf_size, loc );
-    log_printf( LogErr, "%s Unknown pragma: %s.", buf, endp );
+    log_printf( LogErr, 0, "%s Unknown pragma: %s.", buf, endp );
     free( buf );
     return;
   }

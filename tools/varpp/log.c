@@ -62,6 +62,7 @@ void log_init( int nLevel )
  */
 int log_printf( 
 	int nLevel,
+    LOC *loc,
 	const char *format, 
 	...
     )
@@ -75,20 +76,27 @@ int log_printf(
 	    nPrint = 0;
     }
 
-    if( nPrint )
+    if( !nPrint )
     {
-        p = s_Buf;
-        memset( p, 0, BufSize );
-
-        va_start( ap, format );
-            if( s_nLogLevel > LogInfo || nLevel < LogInfo) {
-                nPos  = sprintf( p, "%s", s_szPrefix[nLevel] );
-            }
-            nPos += vsprintf( &p[nPos], format, ap );
-            fputs( p, stderr );
-            fputs( "\n", stderr );
-        va_end( ap );
+        return nPos;
     }
+
+    p = s_Buf;
+    memset( p, 0, BufSize );
+
+    va_start( ap, format );
+        if( s_nLogLevel > LogInfo || nLevel < LogInfo) {
+            nPos  = sprintf( p, "%s", s_szPrefix[nLevel] );
+        }
+        if( loc ) {
+            nPos += loc_fmt( &p[nPos], sizeof(s_Buf) - nPos, loc );
+            p[nPos] = ' ';
+            nPos++;
+        }
+        nPos += vsprintf( &p[nPos], format, ap );
+        fputs( p, stderr );
+        fputs( "\n", stderr );
+    va_end( ap );
 
     return nPos;
 }

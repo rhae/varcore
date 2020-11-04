@@ -32,6 +32,7 @@
 
 #pragma once
 
+#include "loc.h"
 #include <stdarg.h>
 
 enum {
@@ -43,5 +44,5 @@ enum {
 };
 
 void log_init( int nLevel );
-int  log_printf( int nLevel, const char *format, ... );
+int  log_printf( int nLevel, LOC*, const char *format, ... );
 

@@ -63,7 +63,7 @@ StringItem *strpool_Add( StringPool *sp, char const *s, void *priv ) {
   
   str = (StringItem*)calloc( sizeof(StringItem), 1 );
   if( !str ) {
-    log_printf( LogErr, "No memory for new string." );
+    log_printf( LogErr, 0, "No memory for new string." );
     return NULL;
   }
 
