@@ -1,7 +1,7 @@
 
 target ::= tests
 
-sources := testrunner.c varcore_test.c
+sources := $(wildcard *.c)
 objects := $(sources:.c=.o)
 
 CC      := clang

@@ -36,7 +36,12 @@
 extern "C" {
 #endif
 
-void S16_AddTests(void);
+void test_add_s16(void);
+void test_add_s32(void);
+void test_add_f32(void);
+void test_add_string(void);
+void test_add_enum(void);
+void test_add_dump(void);
 
 #ifdef __cplusplus
 }

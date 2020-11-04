@@ -54,7 +54,12 @@ int main(int argc, char* argv[])
       printf("\nInitialization of Test Registry failed.");
     }
     else {
-      S16_AddTests();
+      test_add_s16();
+      test_add_s32();
+      test_add_f32();
+      test_add_string();
+      test_add_enum();
+      test_add_dump();
 
       if( ConsoleOutput ) {
         // CU_console_run_tests();
