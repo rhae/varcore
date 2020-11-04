@@ -4,6 +4,7 @@
   // Weitere Informationen finden Sie unter https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "unit tests",
       "type": "cppdbg",
@@ -11,7 +12,7 @@
       "program": "${workspaceFolder}/test/tests",
       "args": [],
       "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/test",
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",
