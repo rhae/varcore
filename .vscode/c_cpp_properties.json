@@ -4,7 +4,10 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/include/"
+                "tools/varpp/**",
+                "/usr/include/",
+                "/usr/lib/clang/3.8.1/include/",
+                "/usr/include/arm-linux-gnueabihf/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
@@ -13,7 +16,8 @@
             "intelliSenseMode": "clang-x64",
             "browse": {
                 "path": [
-                    "/usr/include"
+                    "${workspaceFolder}/**",
+                    "/usr/include"                    
                 ]
             }
         }
