@@ -451,7 +451,8 @@ int read_csv_file( DataItem **head, char * szFilename)
       item->type |= TYPE_VECTOR;
     }
 
-    if( item->acc_rights & (FLAG_LIMIT | FLAG_CLIP)) {
+    U32 flags = item->acc_rights & (FLAG_LIMIT | FLAG_CLIP);
+    if( flags == (FLAG_LIMIT | FLAG_CLIP)) {
 
       log_printf( LogWarn, loc_cur(), "%s: FLAG_LIMIT and FLAG_CLIP together do not make sense.", cols[ColScpi] );
     }
