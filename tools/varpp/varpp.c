@@ -1383,7 +1383,7 @@ int  get_access( char *pAccess, int *pValue)
 int  get_storage( char * pStorage, int *pValue)
 {
   static Map_t Storage[] = {
-    _MAP( RAM_VOLATILE )
+    _MAP( RAM_VOLATILE ),
     _MAP( FLASH ),
     _MAP( EEPROM ),
   };
