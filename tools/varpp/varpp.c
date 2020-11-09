@@ -919,8 +919,8 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
           fputs( ", ", fp );
         }
 
-        if( isascii( c )) {
-          fprintf( fp, "%c", c );
+        if( c && isascii( c )) {
+          fprintf( fp, "'%c'", c );
         }
         else{
           fprintf( fp, "%#x", c );
