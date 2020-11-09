@@ -29,6 +29,8 @@ libcunit: cunit
 vardef.inc: res.csv
 	../tools/varpp/varpp $<
 
+varcore_test.o: vardef.inc varcore_test.c
+
 tests: libcunit vardef.inc $(objects)
 	$(CC) $(CFLAGS) $(objects) $(LIBS) -o $@
 	./$@
