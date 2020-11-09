@@ -93,7 +93,6 @@ typedef struct _DATA_DOUBLE {
   double def_value;
   double min;
   double max;
-  double prec;
 } PP_DATA_DOUBLE;
 
 typedef struct _ENUM_MBR_DESC {
@@ -159,6 +158,7 @@ static int  get_type( char *, int *);
 static int  get_vector( char *, int *);
 static int  get_access( char *, int *);
 static int  get_storage( char *, int *);
+static int  get_format( char *, int *);
 
 enum {
   line_len  = 255,
@@ -453,6 +453,7 @@ int read_csv_file( DataItem **head, char * szFilename)
     get_vector( cols[ColVector], &item->vec_items );
     get_storage( cols[ColStorage], &item->storage );
     get_access( cols[ColAccess], &item->acc_rights );
+    get_format( cols[ColFormat], &item->format );
 
     if( item->vec_items > 1 ) {
       item->type |= TYPE_VECTOR;
@@ -672,8 +673,12 @@ int save_var_file( DataItem *head, char *szFilename )
     StringItem *si = strpool_Get( &s_StrPools[spScpi], item->scpi );
     scpi_idx = si->offset;
 
-    fprintf(fp, "  { %s,%s 0x%04hx, 0x%04x, 0x%04x, 0x%04x, % 4d, % 4d }",
-             item->hnd, spaces, scpi_idx, item->type, item->vec_items, item->acc_rights, descr_idx, data_idx );
+    fprintf(fp, "  { %s,%s 0x%04hx,"
+                " 0x%04x, 0x%04x, 0x%04x, %d,"
+                " % 4d, % 4d }",
+             item->hnd, spaces, scpi_idx,
+             item->type, item->vec_items, item->acc_rights, item->format,
+             descr_idx, data_idx );
     i++;
     switch( type ) {
       case TYPE_INT16:
@@ -1402,6 +1407,28 @@ int  get_storage( char * pStorage, int *pValue)
   return -1;
 }
 
+static int  get_format( char *fmt, int *value) {
+
+  static Map_t format[] = {
+    _MAP( FMT_DEFAULT ),
+    _MAP( FMT_PREC_1 ),
+    _MAP( FMT_PREC_2 ),
+    _MAP( FMT_PREC_3 ),
+    _MAP( FMT_PREC_4 ),
+    _MAP( FMT_SCI ),
+    _MAP( FMT_DATE ),
+  };
+
+  int i = map_search( format, countof(format), fmt );
+
+  if( i > -1 ) {
+    *value = format[i].nValue;
+    return 0;
+  }
+
+  return -1;
+}
+
 #define CSV_COL( _buf, _col ) ((char*)(*_buf)[_col])
 
 static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
@@ -1460,8 +1487,7 @@ static int parse_double( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   enum {
     colDefault = ColCommonLast,
     colMin,
-    colMax,
-    colPrec
+    colMax
   };
 
   if( col_cnt < colDefault ) {
@@ -1473,7 +1499,6 @@ static int parse_double( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   d->def_value = strtod( CSV_COL(cols, colDefault), 0 );
   d->min = strtod( CSV_COL(cols, colMin), 0 );
   d->max = strtod( CSV_COL(cols, colMax), 0 );
-  d->prec = strtod( CSV_COL(cols, colPrec), 0 );
 
   return 0;
 }

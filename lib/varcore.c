@@ -689,7 +689,7 @@ ErrCode vc_set_min( HND hnd, U8* val, U16 chan ) {
 	return rw_min_max( hnd, val, chan, 2 );
 }
 
-/*** vc_set_min ***********************************************************/
+/*** vc_set_max ***********************************************************/
 /**
  *   Write maximum value of a variable of types:
  *      TYPE_INT16, TYPE_INT32, TYPE_F32.
@@ -700,6 +700,25 @@ ErrCode vc_set_min( HND hnd, U8* val, U16 chan ) {
  */
 ErrCode vc_set_max( HND hnd, U8* val, U16 chan ) {
 	return rw_min_max( hnd, val, chan, 3 );
+}
+
+
+/*** vc_get_format ***************************************************/
+/**
+ *   Get format of the variable
+ *
+ *   @param hnd    Variable handle
+ *   @param fmt    Pointer to format
+ */
+ErrCode vc_get_format( HND hnd, U8 *fmt ) {
+	VAR_DESC const *var;
+
+	assert( hnd < s_vc_data->var_cnt );
+
+	var = get_var( hnd );
+	*(U16*)fmt = var->fmt;
+
+	return kErrNone;
 }
 
 /*** vc_dump_var *****************************************************/
@@ -734,7 +753,7 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 
 	memset( spaces, ' ', sizeof(STRBUF));
 
-	var = &s_vc_data->vars[hnd];
+	var = get_var( hnd );
 	type = var->type & TYPE_MASK;
 	scpi = (var->scpi_idx == HNON) ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
 
