@@ -139,6 +139,21 @@ typedef struct {
   int32_t  nValue;
 } Map_t;
 
+enum {
+  ColHnd = 0,
+  ColScpi = 1,
+  ColCanopen = 2,
+  ColAccess = 3,
+  ColStorage = 4,
+  ColVector = 5,
+  ColFormat = 6,
+  ColType = 7,
+
+  ColCommonLast
+};
+
+/* internal functions
+ ********************************************************************************/
 
 static int  get_type( char *, int *);
 static int  get_vector( char *, int *);
@@ -1403,8 +1418,8 @@ int  get_storage( char * pStorage, int *pValue)
 static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
-    colModifier = 7,
-    colValue = 8
+    colModifier = ColCommonLast,
+    colValue
   };
   char *s;
   StringItem *si;
@@ -1433,9 +1448,9 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 static int parse_int( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
-    colDefault = 7,
-    colMin = 8,
-    colMax = 9
+    colDefault = ColCommonLast,
+    colMin,
+    colMax
   };
 
   if( col_cnt < colDefault ) {
@@ -1454,7 +1469,7 @@ static int parse_int( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 static int parse_double( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
-    colDefault = 7,
+    colDefault = ColCommonLast,
     colMin,
     colMax,
     colPrec
@@ -1491,7 +1506,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   char *s = calloc( BufSize, 1 );
 
   enum {
-    colFirstMbr = 7
+    colFirstMbr = ColCommonLast
   };
 
   if( col_cnt < colFirstMbr ) {
