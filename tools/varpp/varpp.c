@@ -117,12 +117,12 @@ typedef struct _PP_DATA_STRING {
 typedef struct _DataItem {
   STRBUF hnd;
   STRBUF scpi;
+  
   int acc_rights;
-  int fmt;
-  int segment;
-  int type;
   int vec_items;
   int storage;
+  int format;
+  int type;
 
   union _DATA {
     PP_DATA_INT data_int;
