@@ -89,14 +89,14 @@
 /* list of local defined functions
 ----------------------------------------------------------------------------*/
 static int     vc_chk_vector( VAR_DESC const *, int8_t );
-static int     vc_init_s16( VAR_DESC const *);
-static int     vc_init_s32( VAR_DESC const *);
-static int     vc_init_f32( VAR_DESC const *);
-static int     vc_init_f64( VAR_DESC const *);
-static int     vc_init_enum( VAR_DESC const *);
-static int     vc_init_string( VAR_DESC const *);
+static int     init_s16( VAR_DESC const *);
+static int     init_s32( VAR_DESC const *);
+static int     init_f32( VAR_DESC const *);
+static int     init_f64( VAR_DESC const *);
+static int     init_enum( VAR_DESC const *);
+static int     init_string( VAR_DESC const *);
 
-static ErrCode vc_valid_enum( DESCR_ENUM const *, S16 );
+static ErrCode valid_enum( DESCR_ENUM const *, S16 );
 static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag );
 
 /* external variables
@@ -193,27 +193,27 @@ ErrCode vc_reset() {
 		
 		switch( type ) {
 			case TYPE_INT16:
-				E = vc_init_s16( var );
+				E = init_s16( var );
 				break;
 
 			case TYPE_INT32:
-				E = vc_init_s32( var );
+				E = init_s32( var );
 				break;
 
 			case TYPE_ENUM:
-				E = vc_init_enum( var );
+				E = init_enum( var );
 				break;
 
 			case TYPE_FLOAT:
-				E = vc_init_f32( var );
+				E = init_f32( var );
 				break;
 
 			case TYPE_DOUBLE:
-				E = vc_init_f64( var );
+				E = init_f64( var );
 				break;
 
 			case TYPE_STRING:
-				vc_init_string( var );
+				init_string( var );
 				break;
 		}
 	}
@@ -339,7 +339,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 		}
 		else {
 			DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->descr_idx];
-			ret = vc_valid_enum( dscr, *val );
+			ret = valid_enum( dscr, *val );
 			if( ret == kErrNone ) {
 				*data_enum = *val;
 			}
@@ -917,7 +917,7 @@ static ErrCode vc_chk_vector( VAR_DESC const *var, int8_t chan )
  *
  *   @return kErrNone, when done.
  */
-static ErrCode vc_init_s16( VAR_DESC const *var ) {
+static ErrCode init_s16( VAR_DESC const *var ) {
 	DATA_S16 const *descr = &s_vc_data->descr_s16[var->descr_idx];
 	DATA_S16       *data  = &s_vc_data->data_s16[var->data_idx];
 
@@ -933,7 +933,7 @@ static ErrCode vc_init_s16( VAR_DESC const *var ) {
  *
  *   @return kErrNone, when done.
  */
-static ErrCode vc_init_s32( VAR_DESC const *var ) {
+static ErrCode init_s32( VAR_DESC const *var ) {
 	DATA_S32 const *descr = &s_vc_data->descr_s32[var->descr_idx];
 	DATA_S32       *data  = &s_vc_data->data_s32[var->data_idx];
 
@@ -949,7 +949,7 @@ static ErrCode vc_init_s32( VAR_DESC const *var ) {
  *
  *   @return kErrNone, when done.
  */
-static ErrCode vc_init_f32( VAR_DESC const *var ) {
+static ErrCode init_f32( VAR_DESC const *var ) {
 	DATA_F32 const *descr = &s_vc_data->descr_f32[var->descr_idx];
 	DATA_F32       *data  = &s_vc_data->data_f32[var->data_idx];
 
@@ -965,7 +965,7 @@ static ErrCode vc_init_f32( VAR_DESC const *var ) {
  *
  *   @return kErrNone, when done.
  */
-static ErrCode vc_init_f64( VAR_DESC const *var ) {
+static ErrCode init_f64( VAR_DESC const *var ) {
 	DATA_F64 const *descr = &s_vc_data->descr_f64[var->descr_idx];
 	DATA_F64       *data  = &s_vc_data->data_f64[var->data_idx];
 
@@ -981,7 +981,7 @@ static ErrCode vc_init_f64( VAR_DESC const *var ) {
  *
  *   @return kErrNone, when done.
  */
-static ErrCode vc_init_enum( VAR_DESC const *var ) {
+static ErrCode init_enum( VAR_DESC const *var ) {
 	DESCR_ENUM const *descr = (DESCR_ENUM*)&s_vc_data->data_mbr[var->descr_idx];
 	S16              *data  = &s_vc_data->data_enum[var->data_idx];
     
@@ -1000,7 +1000,7 @@ static ErrCode vc_init_enum( VAR_DESC const *var ) {
  *
  *   @return kErrNone, when done.
  */
-static int  vc_init_string( VAR_DESC const *var ) {
+static int  init_string( VAR_DESC const *var ) {
 	DATA_STRING const *descr = &s_vc_data->data_const_str[var->descr_idx];
 	DATA_STRING       *data  = &s_vc_data->data_str[var->data_idx];
 	U16 flags = var->type & TYPE_FLAG;
@@ -1026,7 +1026,7 @@ static int  vc_init_string( VAR_DESC const *var ) {
  *
  *   @return kErrNone when val is a member of the enum.
  */
-static ErrCode vc_valid_enum( DESCR_ENUM const *dscr, S16 val ) {
+static ErrCode valid_enum( DESCR_ENUM const *dscr, S16 val ) {
 	ErrCode E = kErrInvalidEnum;
 
 	for( U16 i = 0; i < dscr->cnt; i++ ) {
