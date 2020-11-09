@@ -369,17 +369,6 @@ int is_hidden_scpi( char *s ) {
  */
 int read_csv_file( DataItem **head, char * szFilename)
 {
-
-  enum {
-    ColHnd = 0,
-    ColScpi = 1,
-    ColCanopen = 2,
-    ColAccess = 3,
-    ColStorage = 4,
-    ColVector = 5,
-    ColType = 6,
-  };
-
   int res;
   uint32_t uCols;
   FILE *fp;
