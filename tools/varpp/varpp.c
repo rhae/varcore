@@ -66,6 +66,9 @@
 # define countof(x) ( sizeof(x) / sizeof(x[0]) )
 #endif
 
+#define str( s ) #s
+#define xstr( s ) str(x)
+
 enum {BufSize = 256};
 
 typedef enum {
@@ -1262,6 +1265,7 @@ enum {
     return 0;
 }
 
+#define _MAP( x ) { str(x), x }
 static int map_search( Map_t const *map, size_t n, char const *needle )
 {
   unsigned int  i;
@@ -1283,15 +1287,14 @@ static int map_search( Map_t const *map, size_t n, char const *needle )
 int  get_type( char *pType , int *pValue )
 {
   static Map_t Types[] = {
+    _MAP( TYPE_INT16 ),
+    _MAP( TYPE_INT32 ),
 
-      {"TYPE_INT16", TYPE_INT16},
-      {"TYPE_INT32", TYPE_INT32},
-
-      {"TYPE_FLOAT", TYPE_FLOAT},
-      {"TYPE_DOUBLE", TYPE_DOUBLE},
-      {"TYPE_ENUM", TYPE_ENUM},
-      {"TYPE_STRING", TYPE_STRING},
-      {"TYPE_ACTION", TYPE_ACTION},
+    _MAP( TYPE_FLOAT ),
+    _MAP( TYPE_DOUBLE ),
+    _MAP( TYPE_ENUM ),
+    _MAP( TYPE_STRING ),
+    _MAP( TYPE_ACTION ),
   };
 
   int i = map_search( Types, countof(Types), pType );
@@ -1338,9 +1341,9 @@ int  get_vector( char *name, int *value )
 int  get_access( char *pAccess, int *pValue)
 {
   static Map_t Access[] = {
-      {"REQ_ADMIN",  REQ_ADMIN},
-      {"FLAG_LIMIT", FLAG_LIMIT},
-      {"FLAG_CLIP",  FLAG_CLIP}
+    _MAP( REQ_ADMIN ),
+    _MAP( FLAG_LIMIT),
+    _MAP( FLAG_CLIP ),
   };
 
   int result = -1;
@@ -1380,10 +1383,9 @@ int  get_access( char *pAccess, int *pValue)
 int  get_storage( char * pStorage, int *pValue)
 {
   static Map_t Storage[] = {
-      {"RAM_VOLATILE", RAM_VOLATILE},
-      {"FLASH", FLASH},
-      {"EEPROM", EEPROM},
-
+    _MAP( RAM_VOLATILE )
+    _MAP( FLASH ),
+    _MAP( EEPROM ),
   };
 
   int i = map_search( Storage, countof(Storage), pStorage );
