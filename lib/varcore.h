@@ -64,22 +64,20 @@ enum {
 	TYPE_VECTOR  = 0x1000,
 	TYPE_CONST   = 0x2000,
 
+	RAM_VOLATILE = 0x0000,
+	EEPROM       = 0x0100,
+	FLASH        = 0x0200,
+
+	MSK_STORAGE  = 0x0f00,
+
 	TYPE_FLAG    = 0xf000,
 	TYPE_MASK    = 0x000f,
 };
 
 enum {
-	RAM_VOLATILE   = 0x0000,
-	EEPROM         = 0x2000,
-	FLASH          = 0x4000,
-
-	MSK_STORAGE    = 0x6000,
-};
-
-enum {
 	REQ_PRG_R   = 0x0001,
 	REQ_CMD_R   = 0x0002,
-    REQ_EX1_R   = 0x0004,
+  REQ_EX1_R   = 0x0004,
 	REQ_EX2_R   = 0x0008,
 
 	REQ_PRG_W   = REQ_PRG_R << 4,
@@ -247,5 +245,7 @@ ErrCode vc_get_min( HND, U8*, U16 );
 ErrCode vc_get_max( HND, U8*, U16 );
 ErrCode vc_set_min( HND, U8*, U16 );
 ErrCode vc_set_max( HND, U8*, U16 );
+
+ErrCode vc_get_storage( HND, U16* );
 
 int vc_dump_var( char *, U16, HND, U16 );

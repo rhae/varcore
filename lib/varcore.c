@@ -702,6 +702,29 @@ ErrCode vc_set_max( HND hnd, U8* val, U16 chan ) {
 	return rw_min_max( hnd, val, chan, 3 );
 }
 
+/*** vc_get_storage *********************************************************/
+/**
+ *   Get the storage modifier of the variable.
+ *
+ *   @param hnd    Variable handle
+ *   @param store  Storage
+ */
+ErrCode vc_get_storage( HND hnd, U16 *store ) {
+	VAR_DESC const *var;
+
+	assert( s_vc_data );
+	assert( hnd < s_vc_data->var_cnt );
+
+	if( NULL == store ) {
+		return kErrInvalidArg;
+	}
+
+	var = get_var( hnd );
+	*store = var->type & MSK_STORAGE;
+
+	return kErrNone;
+}
+
 /*** vc_dump_var *****************************************************/
 /**
  *   Write the contents of the variable to a string buffer.

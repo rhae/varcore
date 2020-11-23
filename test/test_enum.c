@@ -147,10 +147,33 @@ static void wr_enum_invalid(void) {
   CU_ASSERT_EQUAL( YNU, -1 );
 }
 
+static void get_storage_enum(void) {
+  ErrCode ret;
+  U16     storage;
+
+  storage = -1;
+  ret = vc_get_storage( VAR_LOD, &storage );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( storage, RAM_VOLATILE );
+
+  storage = -1;
+  ret = vc_get_storage( VAR_YNU, &storage );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( storage, EEPROM );
+  
+  storage = -1;
+  ret = vc_get_storage( VAR_ZNU, &storage );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_EQUAL( storage, FLASH );
+}
+
+
+
 static CU_TestInfo tests_rdwr_enum[] = {
   { "RD ENUM", rd_enum },
   { "WR ENUM", wr_enum },
   { "WR ENUM (invalid value)", wr_enum_invalid },
+  { "WR get_storage", get_storage_enum },
 	CU_TEST_INFO_NULL,
 };
 

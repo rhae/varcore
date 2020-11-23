@@ -447,10 +447,20 @@ int read_csv_file( DataItem **head, char * szFilename)
     s_nVarCnt++;
     s_nTypeCnt[item->type & TYPE_MASK]++;
 
-    get_vector( cols[ColVector], &item->vec_items );
-    get_storage( cols[ColStorage], &item->storage );
-    get_access( cols[ColAccess], &item->acc_rights );
+    ret = get_vector( cols[ColVector], &item->vec_items );
+    if( ret < 0 ) {
+        log_printf(LogErr, 0, "unknown vector: %s", cols[ColVector] );
+    }
+    ret = get_storage( cols[ColStorage], &item->storage );
+    if( ret < 0 ) {
+        log_printf(LogErr, 0, "unknown storage: %s", cols[ColStorage] );
+    }
+    ret = get_access( cols[ColAccess], &item->acc_rights );
+    if( ret < 0 ) {
+        log_printf(LogErr, 0, "unknown vector: %s", cols[ColAccess] );
+    }
 
+    item->type |= item->storage;
     if( item->vec_items > 1 ) {
       item->type |= TYPE_VECTOR;
     }
