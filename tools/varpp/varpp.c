@@ -467,6 +467,10 @@ int read_csv_file( DataItem **head, char * szFilename)
     if( ret < 0 ) {
         log_printf(LogErr, 0, "unknown vector: %s", cols[ColAccess] );
     }
+    ret = get_format( cols[ColFormat], &item->format );
+    if( ret < 0 ) {
+        log_printf(LogErr, 0, "unknown vector: %s", cols[ColFormat] );
+    }
 
     item->type |= item->storage;
     if( item->vec_items > 1 ) {

@@ -99,13 +99,13 @@ enum {
 };
 
 enum {
-	FMT_DEFAULT = 0,
-	FMT_PREC_1 = 1,
-	FMT_PREC_2 = 2,
-	FMT_PREC_3 = 3,
-	FMT_PREC_4 = 4,
-	FMT_SCI = 4,
-    FMT_DATE = 5,
+	FMT_DEFAULT =  0,
+	FMT_PREC_1  =  1,
+	FMT_PREC_2  =  2,
+	FMT_PREC_3  =  3,
+	FMT_PREC_4  =  4,
+	FMT_SCI     = 20,
+  FMT_DATE,
 	FMT_HEX2,
 	FMT_HEX4,
 	FMT_HEX8
