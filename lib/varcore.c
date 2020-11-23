@@ -743,6 +743,24 @@ ErrCode vc_get_storage( HND hnd, U16 *store ) {
 	return kErrNone;
 }
 
+static int add_sep( char *buf, int bufsz, char c, int len ) {
+	int n;
+
+	assert( buf );
+	assert( len > 0 );
+
+	n = len > bufsz ? bufsz : len;
+	memset( buf, c, n );
+
+	if(( n+2 ) < bufsz ) {
+		buf[n] = '\n'; n++;
+		buf[n] = '\0';
+	}
+	return n;
+
+}
+
+
 /*** vc_dump_var ************************************************************/
 /**
  *   Write the contents of the variable to a string buffer.
@@ -780,7 +798,6 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	scpi = (var->scpi_idx == HNON) ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
 
 	n = snprintf( &buf[len], bufsz - len,
-	  "===========================================\n"
 		"SCPI:               %s\n"
 		"Hnd:                %04X\n"
 		"Data type:          %s (%04X)\n"
@@ -789,7 +806,6 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 		"Descriptor Idx:     %d\n"
 		"Data Idx:           %d\n"
 		"Data\n"
-		"------------------------------------------\n"
 		,
 		scpi,
 		hnd,
@@ -924,7 +940,7 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 			break;
 	}
 
-	n = snprintf( &buf[len], bufsz - len,"===========================================\n" );
+	n = add_sep( &buf[len], bufsz - len, '=', 50 );
 	CHECK_LEN( buf, n, len, bufsz );
 	len += n;
 
