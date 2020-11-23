@@ -743,7 +743,7 @@ ErrCode vc_get_storage( HND hnd, U16 *store ) {
 	return kErrNone;
 }
 
-/*** vc_dump_var *****************************************************/
+/*** vc_dump_var ************************************************************/
 /**
  *   Write the contents of the variable to a string buffer.
  * 
@@ -950,7 +950,7 @@ static ErrCode vc_chk_vector( VAR_DESC const *var, int8_t chan )
 	return ret;
 }
 
-/*** vc_init_s16 **********************************************************/
+/*** vc_init_s16 ************************************************************/
 /**
  *	 Copy data from the descriptor into the data location of \b var
  *
