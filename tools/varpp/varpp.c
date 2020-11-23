@@ -133,7 +133,7 @@ typedef struct _DataItem {
 
 typedef struct {
   char     szKey[BufSize];
-  int32_t  nValue;
+  int      nValue;
 } Map_t;
 
 
@@ -421,6 +421,10 @@ int read_csv_file( DataItem **head, char * szFilename)
     }
 
     DataItem *item = (DataItem *) calloc( sizeof(DataItem), 1 );
+    if( !item ) {
+      res = -1;
+      break;
+    }
 
     strcpy( item->hnd, cols[ColHnd] );
     strcpy( item->scpi, cols[ColScpi] );
@@ -451,7 +455,8 @@ int read_csv_file( DataItem **head, char * szFilename)
       item->type |= TYPE_VECTOR;
     }
 
-    if( item->acc_rights & (FLAG_LIMIT | FLAG_CLIP)) {
+    int mask = (FLAG_LIMIT | FLAG_CLIP);
+    if(( item->acc_rights & mask) == mask) {
 
       log_printf( LogWarn, loc_cur(), "%s: FLAG_LIMIT and FLAG_CLIP together do not make sense.", cols[ColScpi] );
     }
