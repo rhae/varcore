@@ -96,9 +96,9 @@ static void dump(void) {
 
   // buffer is partly filled.
   memset( buf, 'F', 1024 );
-  n = vc_dump_var( buf, 282, VAR_CUR, 0 );
-  CU_ASSERT_EQUAL( n, 270 );
-  CU_ASSERT_EQUAL( strlen(buf), 270 );
+  n = vc_dump_var( buf, 340, VAR_CUR, 0 );
+  CU_ASSERT_EQUAL( n, 315 );
+  CU_ASSERT_EQUAL( strlen(buf), 315 );
 
   S16 YNU = -1;
   vc_as_int16( VAR_YNU, VarWrite, &YNU, 0, REQ_PRG );

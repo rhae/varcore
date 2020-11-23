@@ -121,6 +121,25 @@ char const *s_type_str[] = {
 	"TYPE_ACTION"
 };
 
+char const *s_format_str[] = {
+	"FMT_DEFAULT",
+	"FMT_PREC_1",
+	"FMT_PREC_2",
+	"FMT_PREC_3",
+	"FMT_PREC_4",
+	"FMT_SCI",
+  "FMT_DATE",
+	"FMT_HEX2",
+	"FMT_HEX4",
+	"FMT_HEX8"
+};
+
+char const *s_storage_str[] = {
+	"RAM_VLOATILE",
+	"EEPROM",
+	"FLASH"
+};
+
 static VAR_DESC const* get_var( HND hnd ) {
 	return &s_vc_data->vars[hnd];
 }
@@ -167,6 +186,23 @@ static inline char const* type2str( U16 n ) {
 	}
 	return s_type_str[n];
 }
+
+static inline char const* format2str( U16 n ) {
+	if( n < FMT_SCI ) {
+		return s_format_str[n];
+	}
+	n = n - FMT_SCI + FMT_PREC_4;
+	return s_format_str[n];
+}
+
+static inline char const* storage2str( U16 n ) {
+	n &= MSK_STORAGE;
+	if( n >= FLASH ) {
+		return "UNKNOWN";
+	}
+	return s_storage_str[n];
+}
+
 
 /*** vc_init ****************************************************************/
 /**
@@ -774,7 +810,7 @@ static int add_sep( char *buf, int bufsz, char c, int len ) {
  */
 int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	#define CHECK_LEN( b, n, l, s ) do { \
-     if( n < 0 || (l+n) > s ) {  \
+     if( n < 0 || (l+n) >= s ) {  \
 			 b[l] = '\0'; \
 			 return l; \
 		 } \
@@ -784,6 +820,7 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	VAR_DESC const *var;
 	STRBUF spaces;
 	U16 type;
+	U16 storage;
 	int n;
 	int i;
 	U16 len = 0;
@@ -793,16 +830,23 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 
 	memset( spaces, ' ', sizeof(STRBUF));
 
-	var = get_var( hnd );
-	type = var->type & TYPE_MASK;
-	scpi = (var->scpi_idx == HNON) ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
+	var     = get_var( hnd );
+	type    = var->type & TYPE_MASK;
+	storage = (var->type & MSK_STORAGE) >> 8;
+	scpi    = (var->scpi_idx == HNON) ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
+
+	n = add_sep( &buf[len], bufsz - len, '=', 50 );
+	CHECK_LEN( buf, n, len, bufsz );
+	len += n;
 
 	n = snprintf( &buf[len], bufsz - len,
 		"SCPI:               %s\n"
-		"Hnd:                %04X\n"
-		"Data type:          %s (%04X)\n"
+		"Hnd:                %#04X\n"
+		"Data type:          %s (%#04X)\n"
 		"Items:              %d\n"
-		"Access:             %04X\n"
+		"Access:             %#04X\n"
+		"Storage:            %s (%#04X)\n"
+		"Format:             %s (%#04X)\n"
 		"Descriptor Idx:     %d\n"
 		"Data Idx:           %d\n"
 		"Data\n"
@@ -812,10 +856,16 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 		type2str(type), var->type,
 		var->vec_items,
 		var->acc_rights,
+		format2str(storage), storage,
+		format2str(var->fmt), var->fmt,
 		var->descr_idx,
 		var->data_idx
 	);
 
+	CHECK_LEN( buf, n, len, bufsz );
+	len += n;
+
+	n = add_sep( &buf[len], bufsz - len, '-', 50 );
 	CHECK_LEN( buf, n, len, bufsz );
 	len += n;
 
@@ -891,12 +941,12 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 				if( var->vec_items > 1 ) {
 					n = snprintf( &buf[len], bufsz - len, " %3d:", i );
 					CHECK_LEN( buf, n, len, bufsz );
-				len += n;
-			}
+					len += n;	
+				}
 
 				n = snprintf( &buf[len], bufsz - len, " %13.3f %13.3f %13.3f\n", d->def_value, d->min, d->max );
-			CHECK_LEN( buf, n, len, bufsz );
-			len += n;
+				CHECK_LEN( buf, n, len, bufsz );
+				len += n;
 			}
 			break;
 
