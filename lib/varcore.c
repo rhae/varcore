@@ -873,20 +873,31 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 			break;
 
 		case TYPE_FLOAT:
-#if 0
-			for( i = 0; i < var->vec_items; i++ ) {
-				DATA_S32 *d = &s_vc_data->data_s32[var->data_idx];
-				n = snprintf( &buf[len], bufsz - len, "  %5d %5d %5d", d->def_value, d->min, d->max );
-				if( n < 0 ) {
-					return len;
-				}
-				len += n;
-			}
-#else
-			n = snprintf( &buf[len], bufsz - len, "NOT IMPLEMENTED.\n" );
+			n = snprintf( &buf[len], bufsz - len, "                val           min           max\n");
 			CHECK_LEN( buf, n, len, bufsz );
 			len += n;
-#endif
+
+			if( var->vec_items == 1 ) {
+				n = snprintf( &buf[len], bufsz - len, "     ");
+				CHECK_LEN( buf, n, len, bufsz );
+				len += n;
+			}
+
+			for( i = 0; i < var->vec_items; i++ ) {
+				DATA_F32 *d = &s_vc_data->data_f32[var->data_idx + i];
+				STRBUF temp;
+				int k;
+
+				if( var->vec_items > 1 ) {
+					n = snprintf( &buf[len], bufsz - len, " %3d:", i );
+					CHECK_LEN( buf, n, len, bufsz );
+				len += n;
+			}
+
+				n = snprintf( &buf[len], bufsz - len, " %13.3f %13.3f %13.3f\n", d->def_value, d->min, d->max );
+			CHECK_LEN( buf, n, len, bufsz );
+			len += n;
+			}
 			break;
 
 		case TYPE_ENUM:
