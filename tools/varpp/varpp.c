@@ -66,6 +66,9 @@
 # define countof(x) ( sizeof(x) / sizeof(x[0]) )
 #endif
 
+#define str( s ) #s
+#define xstr( s ) str(x)
+
 enum {BufSize = 256};
 
 typedef enum {
@@ -90,7 +93,6 @@ typedef struct _DATA_DOUBLE {
   double def_value;
   double min;
   double max;
-  double prec;
 } PP_DATA_DOUBLE;
 
 typedef struct _ENUM_MBR_DESC {
@@ -114,12 +116,12 @@ typedef struct _PP_DATA_STRING {
 typedef struct _DataItem {
   STRBUF hnd;
   STRBUF scpi;
+  
   int acc_rights;
-  int fmt;
-  int segment;
-  int type;
   int vec_items;
   int storage;
+  int format;
+  int type;
 
   union _DATA {
     PP_DATA_INT data_int;
@@ -136,11 +138,27 @@ typedef struct {
   int      nValue;
 } Map_t;
 
+enum {
+  ColHnd = 0,
+  ColScpi = 1,
+  ColCanopen = 2,
+  ColAccess = 3,
+  ColStorage = 4,
+  ColVector = 5,
+  ColFormat = 6,
+  ColType = 7,
+
+  ColCommonLast
+};
+
+/* internal functions
+ ********************************************************************************/
 
 static int  get_type( char *, int *);
 static int  get_vector( char *, int *);
 static int  get_access( char *, int *);
 static int  get_storage( char *, int *);
+static int  get_format( char *, int *);
 
 enum {
   line_len  = 255,
@@ -351,17 +369,6 @@ int is_hidden_scpi( char *s ) {
  */
 int read_csv_file( DataItem **head, char * szFilename)
 {
-
-  enum {
-    ColHnd = 0,
-    ColScpi = 1,
-    ColCanopen = 2,
-    ColAccess = 3,
-    ColStorage = 4,
-    ColVector = 5,
-    ColType = 6,
-  };
-
   int res;
   uint32_t uCols;
   FILE *fp;
@@ -447,6 +454,7 @@ int read_csv_file( DataItem **head, char * szFilename)
     s_nVarCnt++;
     s_nTypeCnt[item->type & TYPE_MASK]++;
 
+
     ret = get_vector( cols[ColVector], &item->vec_items );
     if( ret < 0 ) {
         log_printf(LogErr, 0, "unknown vector: %s", cols[ColVector] );
@@ -467,7 +475,6 @@ int read_csv_file( DataItem **head, char * szFilename)
 
     int mask = (FLAG_LIMIT | FLAG_CLIP);
     if(( item->acc_rights & mask) == mask) {
-
       log_printf( LogWarn, loc_cur(), "%s: FLAG_LIMIT and FLAG_CLIP together do not make sense.", cols[ColScpi] );
     }
 
@@ -679,8 +686,12 @@ int save_var_file( DataItem *head, char *szFilename )
     StringItem *si = strpool_Get( &s_StrPools[spScpi], item->scpi );
     scpi_idx = si->offset;
 
-    fprintf(fp, "  { %s,%s 0x%04hx, 0x%04x, 0x%04x, 0x%04x, % 4d, % 4d }",
-             item->hnd, spaces, scpi_idx, item->type, item->vec_items, item->acc_rights, descr_idx, data_idx );
+    fprintf(fp, "  { %s,%s 0x%04hx,"
+                " 0x%04x, 0x%04x, 0x%04x, %d,"
+                " % 4d, % 4d }",
+             item->hnd, spaces, scpi_idx,
+             item->type, item->vec_items, item->acc_rights, item->format,
+             descr_idx, data_idx );
     i++;
     switch( type ) {
       case TYPE_INT16:
@@ -930,8 +941,8 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
           fputs( ", ", fp );
         }
 
-        if( isascii( c )) {
-          fprintf( fp, "%c", c );
+        if( c && isascii( c )) {
+          fprintf( fp, "'%c'", c );
         }
         else{
           fprintf( fp, "%#x", c );
@@ -1276,6 +1287,7 @@ enum {
     return 0;
 }
 
+#define _MAP( x ) { str(x), x }
 static int map_search( Map_t const *map, size_t n, char const *needle )
 {
   unsigned int  i;
@@ -1297,15 +1309,14 @@ static int map_search( Map_t const *map, size_t n, char const *needle )
 int  get_type( char *pType , int *pValue )
 {
   static Map_t Types[] = {
+    _MAP( TYPE_INT16 ),
+    _MAP( TYPE_INT32 ),
 
-      {"TYPE_INT16", TYPE_INT16},
-      {"TYPE_INT32", TYPE_INT32},
-
-      {"TYPE_FLOAT", TYPE_FLOAT},
-      {"TYPE_DOUBLE", TYPE_DOUBLE},
-      {"TYPE_ENUM", TYPE_ENUM},
-      {"TYPE_STRING", TYPE_STRING},
-      {"TYPE_ACTION", TYPE_ACTION},
+    _MAP( TYPE_FLOAT ),
+    _MAP( TYPE_DOUBLE ),
+    _MAP( TYPE_ENUM ),
+    _MAP( TYPE_STRING ),
+    _MAP( TYPE_ACTION ),
   };
 
   int i = map_search( Types, countof(Types), pType );
@@ -1352,9 +1363,9 @@ int  get_vector( char *name, int *value )
 int  get_access( char *pAccess, int *pValue)
 {
   static Map_t Access[] = {
-      {"REQ_ADMIN",  REQ_ADMIN},
-      {"FLAG_LIMIT", FLAG_LIMIT},
-      {"FLAG_CLIP",  FLAG_CLIP}
+    _MAP( REQ_ADMIN ),
+    _MAP( FLAG_LIMIT),
+    _MAP( FLAG_CLIP ),
   };
 
   int result = -1;
@@ -1394,10 +1405,9 @@ int  get_access( char *pAccess, int *pValue)
 int  get_storage( char * pStorage, int *pValue)
 {
   static Map_t Storage[] = {
-      {"RAM_VOLATILE", RAM_VOLATILE},
-      {"FLASH", FLASH},
-      {"EEPROM", EEPROM},
-
+    _MAP( RAM_VOLATILE ),
+    _MAP( FLASH ),
+    _MAP( EEPROM ),
   };
 
   int i = map_search( Storage, countof(Storage), pStorage );
@@ -1410,13 +1420,35 @@ int  get_storage( char * pStorage, int *pValue)
   return -1;
 }
 
+static int  get_format( char *fmt, int *value) {
+
+  static Map_t format[] = {
+    _MAP( FMT_DEFAULT ),
+    _MAP( FMT_PREC_1 ),
+    _MAP( FMT_PREC_2 ),
+    _MAP( FMT_PREC_3 ),
+    _MAP( FMT_PREC_4 ),
+    _MAP( FMT_SCI ),
+    _MAP( FMT_DATE ),
+  };
+
+  int i = map_search( format, countof(format), fmt );
+
+  if( i > -1 ) {
+    *value = format[i].nValue;
+    return 0;
+  }
+
+  return -1;
+}
+
 #define CSV_COL( _buf, _col ) ((char*)(*_buf)[_col])
 
 static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
-    colModifier = 7,
-    colValue = 8
+    colModifier = ColCommonLast,
+    colValue
   };
   char *s;
   StringItem *si;
@@ -1445,9 +1477,9 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 static int parse_int( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
-    colDefault = 7,
-    colMin = 8,
-    colMax = 9
+    colDefault = ColCommonLast,
+    colMin,
+    colMax
   };
 
   if( col_cnt < colDefault ) {
@@ -1466,10 +1498,9 @@ static int parse_int( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 static int parse_double( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
-    colDefault = 7,
+    colDefault = ColCommonLast,
     colMin,
-    colMax,
-    colPrec
+    colMax
   };
 
   if( col_cnt < colDefault ) {
@@ -1481,7 +1512,6 @@ static int parse_double( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   d->def_value = strtod( CSV_COL(cols, colDefault), 0 );
   d->min = strtod( CSV_COL(cols, colMin), 0 );
   d->max = strtod( CSV_COL(cols, colMax), 0 );
-  d->prec = strtod( CSV_COL(cols, colPrec), 0 );
 
   return 0;
 }
@@ -1503,7 +1533,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   char *s = calloc( BufSize, 1 );
 
   enum {
-    colFirstMbr = 7
+    colFirstMbr = ColCommonLast
   };
 
   if( col_cnt < colFirstMbr ) {

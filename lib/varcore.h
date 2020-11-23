@@ -99,11 +99,16 @@ enum {
 };
 
 enum {
-	FMT_DEFAULT,
+	FMT_DEFAULT = 0,
+	FMT_PREC_1 = 1,
+	FMT_PREC_2 = 2,
+	FMT_PREC_3 = 3,
+	FMT_PREC_4 = 4,
+	FMT_SCI = 4,
+    FMT_DATE = 5,
 	FMT_HEX2,
 	FMT_HEX4,
-	FMT_HEX8,
-	FMT_DEC,
+	FMT_HEX8
 };
 
 /* global defined data types
@@ -113,6 +118,7 @@ typedef unsigned char   U8;
 typedef short           S16;
 typedef unsigned short  U16;
 typedef int             S32;
+typedef unsigned int    U32;
 typedef float           F32;
 typedef double          F64;
 
@@ -179,6 +185,7 @@ typedef struct _VAR_DESC {
 	U16         type;
 	U16         vec_items;
 	U16         acc_rights;
+	U16         fmt;
 	U16         descr_idx;
 	U16         data_idx;
 } VAR_DESC;
@@ -246,6 +253,7 @@ ErrCode vc_get_max( HND, U8*, U16 );
 ErrCode vc_set_min( HND, U8*, U16 );
 ErrCode vc_set_max( HND, U8*, U16 );
 
+ErrCode vc_get_format( HND, U8* );
 ErrCode vc_get_storage( HND, U16* );
 
 int vc_dump_var( char *, U16, HND, U16 );

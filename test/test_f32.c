@@ -283,6 +283,15 @@ static void set_min_max() {
   CU_ASSERT_DOUBLE_EQUAL( Max, Mx, 0.1 );
 }
 
+static void get_format() {
+  U16 format = 0;
+  ErrCode ret;
+
+  ret = vc_get_format( VAR_CUR, (U8*)&format );
+  CU_ASSERT_EQUAL16( ret, kErrNone );
+  CU_ASSERT_EQUAL( format, FMT_PREC_1 );
+}
+
 void get_storage_f32() {
   ErrCode ret;
   U16 storage;
@@ -310,6 +319,7 @@ static CU_TestInfo tests_rdwr_f32[] = {
   { "F32, WR min/max",   wr_f32_min_max },
   { "F32, WR clip",      wr_f32_clip },
   { "F32, SET MIN/MAX",  set_min_max },
+  { "F32, GET format",   get_format },
   { "F32, GET STORAGE",  get_storage_f32 },
 	CU_TEST_INFO_NULL,
 };
