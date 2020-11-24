@@ -454,22 +454,25 @@ int read_csv_file( DataItem **head, char * szFilename)
     s_nVarCnt++;
     s_nTypeCnt[item->type & TYPE_MASK]++;
 
-
     ret = get_vector( cols[ColVector], &item->vec_items );
     if( ret < 0 ) {
         log_printf(LogErr, 0, "unknown vector: %s", cols[ColVector] );
+        res = -3;
     }
     ret = get_storage( cols[ColStorage], &item->storage );
     if( ret < 0 ) {
         log_printf(LogErr, 0, "unknown storage: %s", cols[ColStorage] );
+        res = -4;
     }
     ret = get_access( cols[ColAccess], &item->acc_rights );
     if( ret < 0 ) {
-        log_printf(LogErr, 0, "unknown vector: %s", cols[ColAccess] );
+        log_printf(LogErr, 0, "unknown access: %s", cols[ColAccess] );
+        res = -5;
     }
     ret = get_format( cols[ColFormat], &item->format );
     if( ret < 0 ) {
-        log_printf(LogErr, 0, "unknown vector: %s", cols[ColFormat] );
+        log_printf(LogErr, 0, "unknown format: %s", cols[ColFormat] );
+        res = -6;
     }
 
     item->type |= item->storage;
@@ -1433,6 +1436,9 @@ static int  get_format( char *fmt, int *value) {
     _MAP( FMT_PREC_3 ),
     _MAP( FMT_PREC_4 ),
     _MAP( FMT_SCI ),
+    _MAP( FMT_HEX2 ),
+    _MAP( FMT_HEX4 ),
+    _MAP( FMT_HEX8 ),
     _MAP( FMT_DATE ),
   };
 
