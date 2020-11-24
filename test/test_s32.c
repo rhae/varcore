@@ -245,6 +245,32 @@ static void wr32_chan(void)
   CU_ASSERT_EQUAL32( ret, kErrInvalidChan );
 }
 
+static void as_str32(void)
+{
+  ErrCode ret;
+  STRBUF S;
+
+  S32 ERR;
+
+  memset( S, 'S', sizeof(S));
+  ERR = 0xffff;
+  ret = vc_as_int32( VAR_ERR, VarWrite, &ERR, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  ret = vc_as_string( VAR_ERR, VarRead, S, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_STRING_EQUAL( S, "0xffff" );
+
+  memset( S, 'S', sizeof(S));
+  ERR = 0xffffffff;
+  ret = vc_as_int32( VAR_ERR, VarWrite, &ERR, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  ret = vc_as_string( VAR_ERR, VarRead, S, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_STRING_EQUAL( S, "0xffffffff" );
+}
+
 static void set_min_max() {
   S16 Min;
   S16 Max;
@@ -281,6 +307,7 @@ static CU_TestInfo tests_rdwr32[] = {
   { "S32, WR",           wr32 },
   { "S32, RD chan x",    rd32_chan },
   { "S32, WR chan x",    wr32_chan },
+  { "S32, AS string",    as_str32 },
   { "S32, WR min/max",   wr32_min_max },
   { "S32, WR clip",      wr32_clip },
   { "S32, SET MIN/MAX",  set_min_max },

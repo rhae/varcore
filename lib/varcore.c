@@ -420,7 +420,7 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 		return ret;
 	}
 
-    if( chan > 0) {
+  if( chan > 0) {
 		ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
@@ -526,6 +526,7 @@ ErrCode vc_as_float( HND hnd, int rdwr, F32 *val, U16 chan, U16 req ) {
 	return ret;
 }
 
+
 /*** vc_as_string ***********************************************************/
 /**
  *   Read or write a variable of any type.
@@ -580,7 +581,19 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				char *p = val;
 				ret = vc_as_int16( hnd, rdwr, &n16, chan, req );
 				if( ret == kErrNone ) {
-					sprintf( p, "%hd", n16 );
+					switch( var->fmt ) {
+
+						case FMT_HEX2:
+							sprintf( p, "%#hx", n16 );
+							break;
+
+						case FMT_HEX4:
+						  sprintf( p, "%#hx", n16 );
+							break;
+
+						default:
+							sprintf( p, "%d", n16 );
+					}
 				}
 			}
 			break;
@@ -602,7 +615,32 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				char *p = val;
 				ret = vc_as_int32( hnd, rdwr, &n, chan, req );
 				if( ret == kErrNone ) {
-					sprintf( p, "%d", n );
+					S16 n16 = 0;
+					U16 fmt = var->fmt;
+					if( n > 0xffff ) {
+						fmt = FMT_HEX8;
+					}
+					else {
+						n16 = (S16) n;
+					}
+
+					switch( var->fmt ) {
+
+						case FMT_HEX2:
+							sprintf( p, "%#hx", n16 );
+							break;
+
+						case FMT_HEX4:
+							sprintf( p, "%#hx", n16 );
+							break;
+
+						case FMT_HEX8:
+						  sprintf( p, "%#x", n );
+							break;
+
+						default:
+							sprintf( p, "%d", n );
+					}
 				}
 			}
 			break;
@@ -624,7 +662,20 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				char *p = val;
 				ret = vc_as_float( hnd, rdwr, &f, chan, req );
 				if( ret == kErrNone ) {
-					sprintf( p, "%f", f );
+
+					switch( var->fmt ) {
+
+						case FMT_PREC_1:
+						case FMT_PREC_2:
+						case FMT_PREC_3:
+						case FMT_PREC_4:
+						  sprintf( p, "%.*f", var->fmt, f );
+							break;
+
+						default:
+							sprintf( p, "%f", f );
+					}
+					
 				}
 			}
 			break;
@@ -935,8 +986,6 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 
 			for( i = 0; i < var->vec_items; i++ ) {
 				DATA_F32 *d = &s_vc_data->data_f32[var->data_idx + i];
-				STRBUF temp;
-				int k;
 
 				if( var->vec_items > 1 ) {
 					n = snprintf( &buf[len], bufsz - len, " %3d:", i );
@@ -944,7 +993,8 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 					len += n;	
 				}
 
-				n = snprintf( &buf[len], bufsz - len, " %13.3f %13.3f %13.3f\n", d->def_value, d->min, d->max );
+				n = snprintf( &buf[len], bufsz - len, " %13.*f %13.*f %13.*f\n", 
+											var->fmt, d->def_value, var->fmt, d->min, var->fmt, d->max );
 				CHECK_LEN( buf, n, len, bufsz );
 				len += n;
 			}

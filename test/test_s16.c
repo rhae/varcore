@@ -153,6 +153,7 @@ static void as_str16(void)
 
   S16 node_id = 16;
   S16 tmp = 36;
+  S16 STA;
 
   // read S16, read str
   ret = vc_as_int16( VAR_CO_NODEID, VarWrite, &node_id, 0, REQ_PRG );
@@ -193,6 +194,24 @@ static void as_str16(void)
   sprintf( S, "18.23");
   ret = vc_as_string( VAR_TP1, VarWrite, S, 4, REQ_PRG );
   CU_ASSERT_EQUAL( ret, kErrInvalidValue );
+
+  memset( S, 'S', sizeof(S));
+  STA = 128;
+  ret = vc_as_int16( VAR_STA, VarWrite, &STA, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  ret = vc_as_string( VAR_STA, VarRead, S, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_STRING_EQUAL( S, "0x80" );
+
+  memset( S, 'S', sizeof(S));
+  STA = 0xffff;
+  ret = vc_as_int16( VAR_STA, VarWrite, &STA, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+
+  ret = vc_as_string( VAR_STA, VarRead, S, 0, REQ_PRG );
+  CU_ASSERT_EQUAL( ret, kErrNone );
+  CU_ASSERT_STRING_EQUAL( S, "0xffff" );
 }
 
 static void wr16_min_max(void)
