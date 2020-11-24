@@ -842,11 +842,11 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	n = snprintf( &buf[len], bufsz - len,
 		"SCPI:               %s\n"
 		"Hnd:                %#04X\n"
-		"Data type:          %s (%#04X)\n"
+		"Data type:          %s (%#04hX)\n"
 		"Items:              %d\n"
-		"Access:             %#04X\n"
-		"Storage:            %s (%#04X)\n"
-		"Format:             %s (%#04X)\n"
+		"Access:             %#04hX\n"
+		"Storage:            %s (%#04hX)\n"
+		"Format:             %s (%#04hX)\n"
 		"Descriptor Idx:     %d\n"
 		"Data Idx:           %d\n"
 		"Data\n"
@@ -856,7 +856,7 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 		type2str(type), var->type,
 		var->vec_items,
 		var->acc_rights,
-		format2str(storage), storage,
+		storage2str(storage), storage,
 		format2str(var->fmt), var->fmt,
 		var->descr_idx,
 		var->data_idx
