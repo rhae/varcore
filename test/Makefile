@@ -16,12 +16,7 @@ CFLAGS  := -g -W -Wall -pedantic $(INCLUDE)
 all: $(target)
 
 cunit:
-	# git clone https://gitlab.com/cunity/cunit.git
-	if [[ -d cunit ]]; then \
-		cd cunit && git checkout; \
-	else \
-		git clone https://gitlab.com/rhae/cunit.git \
-	fi
+	git clone https://gitlab.com/cunity/cunit.git
 
 libcunit: cunit
 	-cd cunit && mkdir -p local-build && cd local-build && cmake .. && cmake --build . 
