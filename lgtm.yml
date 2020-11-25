@@ -8,13 +8,10 @@ extraction:
     prepare:    # Customizable step used by all languages.
       packages:
         - clang
-    after_prepare:    # Customizable step used by all languages.
-      - export GNU_MAKE=make
-      - export GIT=true
     configure:        # override default configure
       command:
         - echo "No configure needed yet."
     index:    # Customizable step used by all languages.
       build_command:
-        - $GNU_MAKE tools
-        - $GNU_MAKE lib
+        - make tools
+        - make lib
