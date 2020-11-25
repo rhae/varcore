@@ -11,6 +11,3 @@ extraction:
     configure:        # override default configure
       command:
         - echo "No configure needed yet."
-    index:    # Customizable step used by all languages.
-      build_command:
-        - make
