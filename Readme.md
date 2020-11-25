@@ -1,4 +1,5 @@
 ![C/C++ CI](https://github.com/rhae/varcore/workflows/C/C++%20CI/badge.svg?branch=master)
+[![Build Status](https://travis-ci.com/rhae/varcore.svg?branch=master)](https://travis-ci.com/rhae/varcore)
 
 # Code works Ahead!
 The API and function names are subject to change.
