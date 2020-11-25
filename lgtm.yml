@@ -13,5 +13,4 @@ extraction:
         - echo "No configure needed yet."
     index:    # Customizable step used by all languages.
       build_command:
-        - make tools
-        - make lib
+        - make
