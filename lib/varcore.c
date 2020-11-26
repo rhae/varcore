@@ -577,7 +577,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				ret = vc_as_int16( hnd, rdwr, &n16, chan, req );
 			}
 			else {
-				S16 n16 = 0;
+				U16 n16 = 0;
 				char *p = val;
 				ret = vc_as_int16( hnd, rdwr, &n16, chan, req );
 				if( ret == kErrNone ) {
@@ -615,13 +615,13 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				char *p = val;
 				ret = vc_as_int32( hnd, rdwr, &n, chan, req );
 				if( ret == kErrNone ) {
-					S16 n16 = 0;
+					U16 n16 = 0;
 					U16 fmt = var->fmt;
 					if( n > 0xffff ) {
 						fmt = FMT_HEX8;
 					}
 					else {
-						n16 = (S16) n;
+						n16 = (U16) n;
 					}
 
 					switch( var->fmt ) {
@@ -1003,7 +1003,7 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 		case TYPE_ENUM:
 			{
 				DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->descr_idx];
-				for( U16 i = 0; i < dscr->cnt; i++ ) {
+				for( i = 0; i < dscr->cnt; i++ ) {
 					ENUM_MBR const *mbr = (ENUM_MBR const *)&dscr->mbr[i];
 					STRBUF S;
 					int flag = 0;
@@ -1221,6 +1221,12 @@ static ErrCode valid_enum( DESCR_ENUM const *dscr, S16 val ) {
 static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag ) {
 	U16 type;
 
+	union {
+		/*U8   bytes[4];*/
+		S32  val_s32;
+    F32  val_f32;
+	} conv;
+
 	DATA_S16 *data_s16;
 	DATA_S32 *data_s32;
 	DATA_F32 *data_f32;
@@ -1274,10 +1280,12 @@ static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag ) {
 			data_f32 = &s_vc_data->data_f32[ var->data_idx + chan ];
 			if( wr ) {
 				F32 *p = (0 == minmax) ? &data_f32->min : &data_f32->max;
-				*p = *(F32*)val;
+				conv.val_s32 = *(S32 *)val;
+				*p = conv.val_f32;
 			}
 			else {
-				*(F32*) val = (0 == minmax) ? data_f32->min : data_f32->max;
+				conv.val_f32 = (0 == minmax) ? data_f32->min : data_f32->max;
+				*(S32*) val = conv.val_s32;
 			}
 			break;
 
