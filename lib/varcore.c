@@ -127,6 +127,11 @@ char const *s_format_str[] = {
 	"FMT_PREC_2",
 	"FMT_PREC_3",
 	"FMT_PREC_4",
+	"",
+	"",
+	"",
+	"",
+	"",
 	"FMT_SCI",
   "FMT_DATE",
 	"FMT_HEX2",
@@ -188,10 +193,10 @@ static inline char const* type2str( U16 n ) {
 }
 
 static inline char const* format2str( U16 n ) {
-	if( n < FMT_SCI ) {
-		return s_format_str[n];
+	if( n >= FMT_LAST ) {
+		return "UNKNOWN";
 	}
-	n = n - FMT_SCI + FMT_PREC_4;
+	
 	return s_format_str[n];
 }
 
@@ -200,6 +205,7 @@ static inline char const* storage2str( U16 n ) {
 	if( n >= FLASH ) {
 		return "UNKNOWN";
 	}
+	n >>= 8;
 	return s_storage_str[n];
 }
 

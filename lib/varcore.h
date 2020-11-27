@@ -104,11 +104,13 @@ enum {
 	FMT_PREC_2  =  2,
 	FMT_PREC_3  =  3,
 	FMT_PREC_4  =  4,
-	FMT_SCI     = 20,
+	FMT_SCI     = 10,
   FMT_DATE,
 	FMT_HEX2,
 	FMT_HEX4,
-	FMT_HEX8
+	FMT_HEX8,
+
+	FMT_LAST
 };
 
 /* global defined data types
