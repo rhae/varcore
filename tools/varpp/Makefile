@@ -14,7 +14,7 @@ varpp: $(objects)
 
 .PHONY: check
 check:
-	cppcheck $(sources)
+	cppcheck  --enable=all $(sources)
 
 clean:
 	$(RM) $(objects) $(target)
