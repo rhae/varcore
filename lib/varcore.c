@@ -585,7 +585,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 			else {
 				U16 n16 = 0;
 				char *p = val;
-				ret = vc_as_int16( hnd, rdwr, &n16, chan, req );
+				ret = vc_as_int16( hnd, rdwr, (S16*)&n16, chan, req );
 				if( ret == kErrNone ) {
 					switch( var->fmt ) {
 
