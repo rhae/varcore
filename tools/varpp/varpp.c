@@ -497,12 +497,7 @@ int read_csv_file( DataItem **head, char * szFilename)
         break;
     }
 
-    if( !head ) {
-      *head = item;
-    }
-    else {
-      LL_APPEND( *head, item );
-    }
+    LL_APPEND( *head, item );
   }
 
   fclose( fp );
@@ -543,7 +538,6 @@ int save_inc_file( DataItem *head, char *szFilename )
   UNUSED_PARAM( head );
   int nRet;
   DataItem *item;
-  char *spaces;
   DEF_ITER iter;
 
   nRet = 1;
@@ -569,7 +563,7 @@ int save_inc_file( DataItem *head, char *szFilename )
 
   LL_FOREACH( head, item ) {
     int len = strlen( item->hnd );
-    spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
+    char *spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
     fprintf(fp, "#define %s%s  0x%04x\n", item->hnd, spaces, i);
     i++;
   }
@@ -685,7 +679,7 @@ int save_var_file( DataItem *head, char *szFilename )
     fprintf(fp, "  { %s,%s 0x%04hx,"
                 " 0x%04x, 0x%04x, 0x%04x, %d,"
                 " % 4d, % 4d }",
-             item->hnd, spaces, scpi_idx,
+             item->hnd, spaces, (U16)scpi_idx,
              item->type, item->vec_items, item->acc_rights, item->format,
              descr_idx, data_idx );
     i++;
@@ -701,8 +695,8 @@ int save_var_file( DataItem *head, char *szFilename )
       case TYPE_STRING:
         {
           PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
-          size_t len = strlen( p->def_value ) +1;
-          descr_cnt[type] += len;
+          size_t slen = strlen( p->def_value ) +1;
+          descr_cnt[type] += slen;
 
           if( TYPE_CONST != flags ) {
             data_cnt[type] += sizeof(STRBUF) * item->vec_items;
@@ -911,10 +905,10 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
-    U16 type = item->type & TYPE_MASK;
+    U16 _type = item->type & TYPE_MASK;
     U16 isConst = (item->type & TYPE_FLAG) & TYPE_CONST;
 
-    if( type != TYPE_STRING || (type == TYPE_STRING && isConst)) {
+    if( _type != TYPE_STRING || (_type == TYPE_STRING && isConst)) {
       continue;
     }
 
@@ -1001,8 +995,8 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
   LL_FOREACH( head, item ) {
     PP_DATA_STRING *data = &item->data.data_string;
 
-    U16 type = item->type & TYPE_MASK;
-    if( type != TYPE_STRING ) {
+    U16 _type = item->type & TYPE_MASK;
+    if( _type != TYPE_STRING ) {
       continue;
     }
 
@@ -1536,7 +1530,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   CSV_BUF Buf;
   PP_DATA_ENUM *d;
   
-  char *s = calloc( BufSize, 1 );
+  char *es = calloc( BufSize, 1 );
 
   enum {
     colFirstMbr = ColCommonLast
@@ -1544,6 +1538,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 
   if( col_cnt < colFirstMbr ) {
     log_printf( LogErr, 0, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
+    free( es );
     return -1;
   }
 
@@ -1555,7 +1550,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   int i = colFirstMbr;
   for( ; ; i++) {
     ENUM_MBR_DESC *mbr;
-    uint32_t col_cnt;
+    uint32_t cnt;
 
     char *s = strtrim( CSV_COL( cols, i ), ' ');
     if( 0 == strlen( s )) {
@@ -1566,8 +1561,8 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
     LL_APPEND( d->items, mbr );
 
     memset( Buf, 0, sizeof(Buf));
-    col_cnt = MaxCsvColumns;
-    split( s, '=', (char**)Buf, LineSize, &col_cnt );
+    cnt = MaxCsvColumns;
+    split( s, '=', (char**)Buf, LineSize, &cnt );
 
     s = CSV_COL( &Buf, 0 );
     if( ':' == *s ) {
@@ -1577,7 +1572,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
     strcpy( mbr->hnd, s );
 
     mbr->value = i - colFirstMbr;
-    if( col_cnt > 1 ) {
+    if( cnt > 1 ) {
       s = CSV_COL( &Buf, 1 );
       errno = 0;
       mbr->value = strtol( s, 0, 0 );
@@ -1586,7 +1581,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
       }
     }
 
-    if( col_cnt > 2 ) {
+    if( cnt > 2 ) {
       StringItem *si;
       s = CSV_COL( &Buf, 2 );
       s = skip_space( s );
@@ -1601,10 +1596,10 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
     d->cnt++;
   }
 
-  serialize_enum( s, (size_t)kBufSize, d );
-  strpool_Add( &s_EnumPool, s, d );
+  serialize_enum( es, (size_t)kBufSize, d );
+  strpool_Add( &s_EnumPool, es, d );
 
-  free(s);
+  free(es);
 
   return 0;
 }
