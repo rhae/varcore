@@ -83,17 +83,11 @@ typedef struct {
   int init_data;
 } Config;
 
-typedef struct _DATA_INT {
-  int def_value;
-  int min;
-  int max;
-} PP_DATA_INT;
-
-typedef struct _DATA_DOUBLE {
+typedef struct _DATA_NUMBER {
   double def_value;
   double min;
   double max;
-} PP_DATA_DOUBLE;
+} PP_DATA_NUMBER;
 
 typedef struct _ENUM_MBR_DESC {
   int    value;
@@ -124,8 +118,7 @@ typedef struct _DataItem {
   int type;
 
   union _DATA {
-    PP_DATA_INT data_int;
-    PP_DATA_DOUBLE data_double;
+    PP_DATA_NUMBER data_number;
     PP_DATA_ENUM data_enum;
     PP_DATA_STRING data_string;
   } data;
@@ -169,8 +162,7 @@ enum {
 };
 typedef char CSV_BUF[MaxCsvColumns][LineSize];
 
-static int parse_int( DataItem *, size_t, CSV_BUF* );
-static int parse_double( DataItem *, size_t, CSV_BUF* );
+static int parse_number( DataItem *, size_t, CSV_BUF* );
 static int parse_string( DataItem *, size_t, CSV_BUF* );
 static int parse_enum( DataItem *, size_t, CSV_BUF* );
 
@@ -495,12 +487,9 @@ int read_csv_file( DataItem **head, char * szFilename)
 
       case TYPE_FLOAT:
       case TYPE_DOUBLE:
-        parse_double( item, uCols, &cols );
-        break;
-
       case TYPE_INT16:
       case TYPE_INT32:
-        parse_int( item, uCols, &cols );
+        parse_number( item, uCols, &cols );
         break;
 
       case TYPE_STRING:
@@ -828,8 +817,7 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
   LL_FOREACH( head, item ) {
     int len;
     char *spaces;
-    PP_DATA_INT    *data_int    = &item->data.data_int;
-    PP_DATA_DOUBLE *data_double = &item->data.data_double;
+    PP_DATA_NUMBER    *data_number    = &item->data.data_number;
 
     if((item->type & TYPE_MASK) != type ) {
       continue;
@@ -849,6 +837,7 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
 
     fprintf(fp, "  /* %s%s */", item->hnd, spaces );
     for( int j = 0; j < item->vec_items; j++ ) {
+      S32 min, max, def_value;
       if( j > 0 ) {
         fputs( ",\n", fp );
         spaces = srepeat( ' ', 10 + s_Stats.max_var_hnd_len );
@@ -858,12 +847,15 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
       switch( type ) {
         case TYPE_INT16:
         case TYPE_INT32:
-          fprintf( fp, zfmt, data_int->def_value, data_int->min, data_int->max );
+          min = (S32)data_number->min;
+          max = (S32)data_number->max; 
+          def_value = (S32)data_number->def_value;
+          fprintf( fp, zfmt, def_value, min, max );
           break;
 
         case TYPE_FLOAT:
         case TYPE_DOUBLE:
-          fprintf( fp, zfmt, data_double->def_value, data_double->min, data_double->max );
+          fprintf( fp, zfmt, data_number->def_value, data_number->min, data_number->max );
           break;
       }
     }
@@ -1484,7 +1476,31 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
   return 0;
 }
 
-static int parse_int( DataItem *item, size_t col_cnt, CSV_BUF *cols )
+/*** strton *****************************************************************/
+/**
+ *   Read string and format as number, ie. double.
+ * 
+ *   Accepts hex, decimal an floating point strings.
+ * 
+ *   The syntax is adopted from the strtol and strtod functions.
+ * 
+ *   @param p      string
+ *   @param endp   see strtod and strtol
+ */
+static F64 strton( char const *p, char **endp ) {
+  F64 value;
+
+  if( 0 == strncmp( p, "0x", 2 ) || 0 == strncmp( p, "0X", 2 )) {
+    value = strtol( p, endp, 0 );
+  }
+  else {
+    value = strtod( p, endp );
+  }
+  
+  return value;
+}
+
+static int parse_number( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
   enum {
     colDefault = ColCommonLast,
@@ -1497,36 +1513,16 @@ static int parse_int( DataItem *item, size_t col_cnt, CSV_BUF *cols )
     return -1;
   }
 
-  PP_DATA_INT *d = &item->data.data_int;
-  d->def_value = strtol( CSV_COL(cols, colDefault), 0, 0 );
-  d->min = strtol( CSV_COL(cols, colMin), 0, 0 );
-  d->max = strtol( CSV_COL(cols, colMax), 0, 0 );
+  PP_DATA_NUMBER *d = &item->data.data_number;
+  d->def_value = strton( CSV_COL(cols, colDefault), 0 );
+  d->min = strton( CSV_COL(cols, colMin), 0 );
+  d->max = strton( CSV_COL(cols, colMax), 0 );
 
   return 0;
 }
 
-static int parse_double( DataItem *item, size_t col_cnt, CSV_BUF *cols )
-{
-  enum {
-    colDefault = ColCommonLast,
-    colMin,
-    colMax
-  };
 
-  if( col_cnt < colDefault ) {
-    log_printf( LogErr, 0, "Not enough columns for variable %s.", CSV_COL(cols, 0 ));
-    return -1;
-  }
-
-  PP_DATA_DOUBLE *d = &item->data.data_double;
-  d->def_value = strtod( CSV_COL(cols, colDefault), 0 );
-  d->min = strtod( CSV_COL(cols, colMin), 0 );
-  d->max = strtod( CSV_COL(cols, colMax), 0 );
-
-  return 0;
-}
-
-/** parse_enumn *************************************************************/
+/** parse_enum **************************************************************/
 /**
  *  @param item
  *  @param col_cnt
