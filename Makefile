@@ -1,6 +1,6 @@
 
 
-all: tools lib test
+all: tools lib examples test
 
 .PHONY: lib
 lib:
@@ -14,6 +14,11 @@ test: lib
 tools: 
 	$(MAKE) -C tools
 
+.PHONY: examples
+examples: 
+	$(MAKE) -C examples
+
+
 .PHONY: check
 check:
 	$(MAKE) -C lib check
@@ -26,4 +31,5 @@ cppcheck:
 clean:
 	$(MAKE) -C tools clean
 	$(MAKE) -C lib clean
+	$(MAKE) -C examples clean
 	$(MAKE) -C test clean
