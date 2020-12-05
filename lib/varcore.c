@@ -327,7 +327,10 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	U16 type;
 
 	assert( s_vc_data );
-	assert( hnd < s_vc_data->var_cnt );
+	
+	if( hnd >= s_vc_data->var_cnt ) {
+		return kErrUnknownCmd;
+	}
 
 	if( NULL == val ) {
 		return kErrInvalidArg;
@@ -417,7 +420,10 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 	DATA_S32 *data;
 
 	assert( s_vc_data );
-	assert( hnd < s_vc_data->var_cnt );
+
+	if( hnd >= s_vc_data->var_cnt ) {
+		return kErrUnknownCmd;
+	}
 
 	if( NULL == val ) {
 		return kErrInvalidArg;
@@ -487,7 +493,10 @@ ErrCode vc_as_float( HND hnd, int rdwr, F32 *val, U16 chan, U16 req ) {
 	DATA_F32 *data;
 
 	assert( s_vc_data );
-	assert( hnd < s_vc_data->var_cnt );
+
+	if( hnd >= s_vc_data->var_cnt ) {
+		return kErrUnknownCmd;
+	}
 
 	if( NULL == val ) {
 		return kErrInvalidArg;
@@ -566,8 +575,11 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 	U16 flags;
 	
 	assert( s_vc_data );
-	assert( hnd < s_vc_data->var_cnt );
 
+	if( hnd >= s_vc_data->var_cnt ) {
+		return kErrUnknownCmd;
+	}
+	
 	if( NULL == val ) {
 		return kErrInvalidArg;
 	}
@@ -833,7 +845,10 @@ ErrCode vc_get_storage( HND hnd, U16 *store ) {
 	VAR_DESC const *var;
 
 	assert( s_vc_data );
-	assert( hnd < s_vc_data->var_cnt );
+	
+	if( hnd >= s_vc_data->var_cnt ) {
+		return kErrUnknownCmd;
+	}
 
 	if( NULL == store ) {
 		return kErrInvalidArg;
@@ -917,7 +932,9 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	U16 len = 0;
 	char const *scpi;
 
-	assert( hnd < s_vc_data->var_cnt );
+	if( hnd >= s_vc_data->var_cnt ) {
+		return kErrUnknownCmd;
+	}
 
 	memset( spaces, ' ', sizeof(STRBUF));
 
@@ -1277,7 +1294,10 @@ static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag ) {
 	int wr     = (flag & 2) >> 1;
 	
 	assert( s_vc_data );
-	assert( hnd < s_vc_data->var_cnt );
+	
+	if( hnd >= s_vc_data->var_cnt ) {
+		return kErrUnknownCmd;
+	}
 
 	if( NULL == val ) {
 		return kErrInvalidArg;
