@@ -130,7 +130,8 @@ typedef double          F64;
 
 #define HNON (U16)-1
 
-typedef S16             HND;
+// HND needs to be unsigned!
+typedef U16             HND;
 typedef char            STRBUF[32];
 
 typedef struct {
