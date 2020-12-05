@@ -30,21 +30,74 @@
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "CUnit/CUnit.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
-void test_add_s16(void);
-void test_add_s32(void);
-void test_add_f32(void);
-void test_add_string(void);
-void test_add_enum(void);
-void test_add_dump(void);
-void test_add_misc(void);
 
-#ifdef __cplusplus
+/* WARNING - MAINTENANCE NIGHTMARE AHEAD
+ *
+ * If you change any of the tests & suites below, you also need
+ * to keep track of changes in the result statistics and reflect
+ * any changes in the result report counts in print_example_results().
+ *
+ * Yes, this could have been designed better using a more
+ * automated mechanism.  No, it was not done that way.
+ */
+
+#include <varcore.h>
+
+#include "vardefs.h"
+
+extern VC_DATA g_var_data;
+
+#include "test_utils.h"
+
+/* Suite initialization/cleanup functions */
+static int suite_init(void) {
+  vc_init(&g_var_data);
+  return 0;
 }
-#endif
 
+static int suite_clean(void) {
+  return 0; 
+}
+
+
+static void get_scpi() {
+  HND hnd;
+
+  hnd = vc_get_hnd( "IDN" );
+  CU_ASSERT_EQUAL( hnd, VAR_IDN );
+
+  hnd = vc_get_hnd( "YON" );
+  CU_ASSERT_EQUAL( hnd, VAR_YON );
+}
+
+static CU_TestInfo tests_misc[] = {
+  { "Get SCPI handle",   get_scpi },
+	CU_TEST_INFO_NULL,
+};
+
+/*** Suite definition  ******************************************************/
+
+static CU_SuiteInfo suites[] = {
+  { "misc functions",  suite_init, suite_clean, NULL, NULL, tests_misc },
+	CU_SUITE_INFO_NULL,
+};
+
+void test_add_misc(void)
+{
+  assert(NULL != CU_get_registry());
+  assert(!CU_is_test_running());
+
+	/* Register suites. */
+	if (CU_register_suites(suites) != CUE_SUCCESS) {
+		fprintf(stderr, "suite registration failed - %s\n",
+			CU_get_error_msg());
+		exit(EXIT_FAILURE);
+	}
+}

@@ -258,4 +258,6 @@ ErrCode vc_set_max( HND, U8*, U16 );
 ErrCode vc_get_format( HND, U8* );
 ErrCode vc_get_storage( HND, U16* );
 
+HND vc_get_hnd( char const * );
+
 int vc_dump_var( char *, U16, HND, U16 );

@@ -209,6 +209,15 @@ static inline char const* storage2str( U16 n ) {
 	return s_storage_str[n];
 }
 
+static inline char const *get_scpi( HND hnd ) {
+	VAR_DESC const *var;
+
+	var = get_var( hnd );
+	if( !var ) {
+		return 0;
+	}
+	return (var->scpi_idx == HNON) ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
+}
 
 /*** vc_init ****************************************************************/
 /**
@@ -836,6 +845,31 @@ ErrCode vc_get_storage( HND hnd, U16 *store ) {
 	return kErrNone;
 }
 
+/*** vc_get_hnd *************************************************************/
+/**
+ *   Get the storage modifier of the variable.
+ *
+ *   @param scpi   SCPI string
+ *
+ *   @return HNON, when scpi was not found.
+ */
+HND vc_get_hnd( char const *scpi ) {
+
+	for( HND i = 0; i < s_vc_data->var_cnt; i++ ) {
+
+		char const *s = get_scpi( i );
+
+		if( s ) {
+			int res = strcmp( scpi, s );
+			if( 0 == res ) {
+				return i;
+			}
+		}
+	}
+
+	return HNON;
+}
+
 static int add_sep( char *buf, int bufsz, char c, int len ) {
 	int n;
 
@@ -890,7 +924,7 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	var     = get_var( hnd );
 	type    = var->type & TYPE_MASK;
 	storage = (var->type & MSK_STORAGE) >> 8;
-	scpi    = (var->scpi_idx == HNON) ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
+	scpi    = get_scpi( hnd );
 
 	n = add_sep( &buf[len], bufsz - len, '=', 50 );
 	CHECK_LEN( buf, n, len, bufsz );

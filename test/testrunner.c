@@ -60,6 +60,7 @@ int main(int argc, char* argv[])
       test_add_string();
       test_add_enum();
       test_add_dump();
+      test_add_misc();
 
       if( ConsoleOutput ) {
         // CU_console_run_tests();
