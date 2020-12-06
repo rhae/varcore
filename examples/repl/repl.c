@@ -37,9 +37,10 @@ int main(int argc, char **argv ) {
   UNUSED_PARAM(argv);
 
   console_init();
+  telnet_init();
   vars_init();
 
-  textio_open( "CONSOLE", "" );
+  textio_open( "TELNET", "port=8023" );
 
   repl_run( "vars> " );
 
