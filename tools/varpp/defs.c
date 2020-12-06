@@ -81,7 +81,11 @@ void defs_add( char const *line, LOC const *loc ) {
   }
 
   n = s1 - s2;
-  assert( n < 64 );
+  if( n >= 63 ) {
+    log_printf( LogErr, loc, "Define too long." );
+    return;
+  }
+
   memcpy( def->name, s2, n );
 
   s2 = s1;
@@ -96,11 +100,11 @@ void defs_add( char const *line, LOC const *loc ) {
   DEF *d = defs_get( def->name );
   if( d ) {
     if( 0 == strcmp(def->value, d->value)) {
-      log_printf( LogWarn, loc_cur(), "Define %s already exists with same value. See: %s:%d, %s:%d",
+      log_printf( LogWarn, loc, "Define %s already exists with same value. See: %s:%d, %s:%d",
         def->name, def->loc.file, def->loc.line_nr, d->loc.file, d->loc.line_nr  );
     }
     else {
-      log_printf( LogErr, loc_cur(), "Define %s already exists. See: %s:%d, %s:%d",
+      log_printf( LogErr, loc, "Define %s already exists. See: %s:%d, %s:%d",
         def->name, def->loc.file, def->loc.line_nr, d->loc.file, d->loc.line_nr  );
     }
   }
