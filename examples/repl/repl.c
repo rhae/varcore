@@ -21,12 +21,12 @@ struct SCPI {
   int    Request;
 };
 
-void repl_run(char const *prompt);
-int repl_eval( char*, int, char const *, int );
+void  repl_run(char const *prompt);
+int   repl_eval( char*, int, char const *, int );
 char *skip_space( char* );
-int isscpi( char );
-int copy_scpi( struct SCPI *, char const *line );
-void test_copy_scpi();
+int   isscpi( char );
+int   parse_scpi( struct SCPI *, char const *line );
+void  test_copy_scpi();
 
 int main(int argc, char **argv ) {
 
@@ -74,7 +74,7 @@ void repl_run( char const *prompt ) {
 
 int repl_eval( char *resp, int respsz, char const *req, int reqsz ) {
   struct SCPI S;
-  int ret;
+  int         ret;
 
   UNUSED_PARAM( reqsz );
 
@@ -85,7 +85,7 @@ int repl_eval( char *resp, int respsz, char const *req, int reqsz ) {
     return snprintf( resp, respsz, "ERROR: not a SCPI!" );
   }
   p++;
-  ret = copy_scpi( &S, p );
+  ret = parse_scpi( &S, p );
 
   if( ret != 0 ) {
     return snprintf( resp, respsz, "ERROR: Invalid SCPI (%d)!", ret );
@@ -109,7 +109,7 @@ int repl_eval( char *resp, int respsz, char const *req, int reqsz ) {
   
 }
 
-int copy_scpi( struct SCPI *scpi, char const *line ) {
+int parse_scpi( struct SCPI *scpi, char const *line ) {
   enum {
     stBegin,
     stScpi,
@@ -122,8 +122,8 @@ int copy_scpi( struct SCPI *scpi, char const *line ) {
 
   assert( line );
 
-  int result = 0;
-  int state = stBegin;
+  int   result = 0;
+  int   state = stBegin;
   char *src = (char*) line;
   char *dst = 0;
 
@@ -252,31 +252,31 @@ char *skip_space( char *s ) {
   return s;
 }
 
-void test_copy_scpi() {
+void test_parse_scpi() {
   struct SCPI S;
   int n;
 
   memset( &S, 'S', sizeof(struct SCPI));
-  n = copy_scpi( &S, "01:TMP?" );
+  n = parse_scpi( &S, "01:TMP?" );
 
   memset( &S, 'S', sizeof(struct SCPI));
-  n = copy_scpi( &S, "TMP?" );
+  n = parse_scpi( &S, "TMP?" );
 
   memset( &S, 'S', sizeof(struct SCPI));
-  n = copy_scpi( &S, "TMP    \t?" );
+  n = parse_scpi( &S, "TMP    \t?" );
 
   memset( &S, 'S', sizeof(struct SCPI));
-  n = copy_scpi( &S, "TMP:ACT ?" );
+  n = parse_scpi( &S, "TMP:ACT ?" );
 
   memset( &S, 'S', sizeof(struct SCPI));
-  n = copy_scpi( &S, "TMP 123" );
+  n = parse_scpi( &S, "TMP 123" );
 
   memset( &S, 'S', sizeof(struct SCPI));
-  n = copy_scpi( &S, "TMP123" );
+  n = parse_scpi( &S, "TMP123" );
 
   memset( &S, 'S', sizeof(struct SCPI));
-  n = copy_scpi( &S, "TMP.MAX ?" );
+  n = parse_scpi( &S, "TMP.MAX ?" );
 
   memset( &S, 'S', sizeof(struct SCPI));
-  n = copy_scpi( &S, "TMP.MAX xyv" );
+  n = parse_scpi( &S, "TMP.MAX xyv" );
 }
