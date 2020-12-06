@@ -1625,7 +1625,7 @@ int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
     }
 
     n = snprintf( s, rest, "%s=%d", mbr->hnd, mbr->value );
-    if( n <= 0 ) {
+    if( n <= 0 || (size_t)n > BufSize ) {
       log_printf( LogErr, 0, "%s: invalid length", __FUNCTION__ );
       return 0;
     }
@@ -1654,7 +1654,7 @@ int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
     mbr = mbr->next;
   }
 
-  return (int)(s - BufSize);
+  return (int)(s - Buf);
 }
 
 static int find_opt( char const *p, char const **opt_list, char **endp, int *idx ) {
