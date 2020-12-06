@@ -26,11 +26,11 @@ int   repl_eval( char*, int, char const *, int );
 char *skip_space( char* );
 int   isscpi( char );
 int   parse_scpi( struct SCPI *, char const *line );
-void  test_copy_scpi();
+void  test_parse_scpi();
 
 int main(int argc, char **argv ) {
 
-  test_copy_scpi();
+  test_parse_scpi();
 
 
   UNUSED_PARAM(argc);
