@@ -1015,7 +1015,7 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
 
       k = 0;
       for( char *p = data->def_value; *p != '\0'; p++, k++ ) {
-        if( k > 0 ) {
+        if( k ) {
           fputs( ", ", fp );
         }
 
