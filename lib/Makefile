@@ -17,7 +17,7 @@ libvarcore.a: $(objects)
 
 .PHONY: check
 check:
-	cppcheck  --enable=all $(sources)
+	cppcheck -I. --suppressions-list=cppcheck_suppress.txt --enable=all $(sources)
 
 clean:
 	$(RM) $(objects) $(target)
