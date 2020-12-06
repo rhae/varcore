@@ -4,7 +4,7 @@ target ::= varpp
 sources := utils.c log.c loc.c defs.c strpool.c varpp.c
 objects := $(sources:.c=.o)
 
-CC := clang
+CC ?= clang
 
 CFLAGS := -g -W -Wall
 

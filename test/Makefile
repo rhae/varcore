@@ -4,7 +4,7 @@ target ::= tests
 sources := $(wildcard *.c)
 objects := $(sources:.c=.o)
 
-CC      := clang
+CC      ?= clang
 AR      := ar
 
 INCLUDE := -Icunit/CUnit -I../lib
