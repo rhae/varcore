@@ -512,12 +512,12 @@ static void write_header( FILE *fp, char const *description ) {
 
   char date[256];
   time_t t;
-  struct tm *tmp;
+  struct tm tmp;
 
   t = time(NULL);
-  tmp = localtime(&t);
+  localtime_r(&t, &tmp);
   
-  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", tmp);
+  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", &tmp);
 
   fprintf( fp, "/**\n"
            " * Generated from %s %d.%d.%d\n"
