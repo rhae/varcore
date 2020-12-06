@@ -512,12 +512,12 @@ static void write_header( FILE *fp, char const *description ) {
 
   char date[256];
   time_t t;
-  struct tm *tmp;
+  struct tm tmp;
 
   t = time(NULL);
-  tmp = localtime(&t);
+  localtime_r(&t, &tmp);
   
-  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", tmp);
+  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", &tmp);
 
   fprintf( fp, "/**\n"
            " * Generated from %s %d.%d.%d\n"
@@ -1015,7 +1015,7 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
 
       k = 0;
       for( char *p = data->def_value; *p != '\0'; p++, k++ ) {
-        if( k > 0 ) {
+        if( k ) {
           fputs( ", ", fp );
         }
 

@@ -62,7 +62,7 @@ void log_init( int nLevel )
  */
 int log_printf( 
 	int nLevel,
-    LOC *loc,
+    LOC const *loc,
 	const char *format, 
 	...
     )

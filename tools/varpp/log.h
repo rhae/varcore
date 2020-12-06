@@ -44,5 +44,5 @@ enum {
 };
 
 void log_init( int nLevel );
-int  log_printf( int nLevel, LOC*, const char *format, ... );
+int  log_printf( int nLevel, LOC const *, const char *format, ... );
 
