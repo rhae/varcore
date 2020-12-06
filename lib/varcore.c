@@ -357,7 +357,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 		return ret;
 	}
 
-  	if( chan > 0 ) {
+  if( chan > 0 ) {
 		ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
@@ -400,7 +400,6 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 		}
 	}
 	
-
 	return ret;
 }
 
