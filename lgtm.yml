@@ -1,7 +1,7 @@
 path_classifiers:
   test:
     - "lib/*.c"
-    - "tool/**/*.c"
+    - "tools/**/*.c"
 queries:
   - exclude: cpp/use-of-goto            
 extraction:
