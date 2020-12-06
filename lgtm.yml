@@ -2,12 +2,14 @@ path_classifiers:
   test:
     - "lib/*.c"
     - "tools/**/*.c"
-  queries:
+queries:
+  - exclude: cpp/use-of-goto            
 extraction:
   cpp:
-    prepare:    # Customizable step used by all languages.
-      packages:
-        - clang
-    configure:        # override default configure
-      command:
-        - echo "No configure needed yet."
+    after_prepare:    # Customizable step used by all languages.
+      - export CC=gcc
+      - export GNU_MAKE=make
+      - export GIT=true
+    index:    # Customizable step used by all languages.
+      build_command:
+        - $GNU_MAKE
