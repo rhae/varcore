@@ -7,6 +7,7 @@ queries:
 extraction:
   cpp:
     after_prepare:    # Customizable step used by all languages.
+      - export CC=gcc
       - export GNU_MAKE=make
       - export GIT=true
     index:    # Customizable step used by all languages.
