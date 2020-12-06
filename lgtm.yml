@@ -10,4 +10,5 @@ extraction:
         - clang
     configure:        # override default configure
       command:
-        - echo "No configure needed yet."
+        - echo "No configure needed yet." > hello.txt
+
