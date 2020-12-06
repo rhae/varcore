@@ -1,6 +1,7 @@
 
 
 #include "console.h"
+#include "telnet.h"
 #include "textio.h"
 #include "vars.h"
 
@@ -263,6 +264,9 @@ void test_parse_scpi() {
 
   memset( &S, 'S', sizeof(struct SCPI));
   n = parse_scpi( &S, "01:TMP?" );
+  if( n < 0 ) {
+    printf("failed.\n");
+  }
 
   memset( &S, 'S', sizeof(struct SCPI));
   n = parse_scpi( &S, "TMP?" );

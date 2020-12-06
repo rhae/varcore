@@ -651,7 +651,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 						n16 = (U16) n;
 					}
 
-					switch( var->fmt ) {
+					switch( fmt ) {
 
 						case FMT_HEX2:
 							sprintf( p, "%#hx", n16 );
