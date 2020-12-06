@@ -98,6 +98,10 @@ int repl_eval( char *resp, int respsz, char const *req, int reqsz ) {
       return snprintf( resp, respsz, "ERROR %04X", ret );
     }
 
+    if( S.Request == VarWrite ) {
+      vars_as_string( hnd, VarRead, S.Value, S.Chan, REQ_CMD );
+    }
+
     if( S.ChanAvail ) {
       return sprintf(resp, ":%02d:%s %s", S.Chan, S.Scpi, S.Value );
     }
