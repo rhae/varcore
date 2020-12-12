@@ -5,3 +5,6 @@ vardef.inc
 
 *.xml
 *.o
+
+build/**
+
