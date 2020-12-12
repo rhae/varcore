@@ -424,7 +424,6 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 		}
 	}
 	
-
 	return ret;
 }
 
