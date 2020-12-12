@@ -5,13 +5,13 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${varcore_SOURCE_DIR}/*.h")
 
 # Make an automatic library - will be static or dynamic based on user setting
-add_library(varcore_library varcore.c ${HEADER_LIST})
+add_library(varcore varcore.c ${HEADER_LIST})
 
 # We need this directory, and users of our library will need it too
-target_include_directories(varcore_library PUBLIC .)
+target_include_directories(varcore PUBLIC .)
 
 # All users of this library will need at least C++11
-target_compile_features(varcore_library PUBLIC c_std_99)
+target_compile_features(varcore PUBLIC c_std_99)
 
 # IDEs should put the headers in a nice place
 source_group(
