@@ -1,3 +1,4 @@
 unusedFunction
 missingIncludeSystem
+misra-c2012-15.5
 

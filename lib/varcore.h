@@ -61,41 +61,41 @@ enum {
 
 	TYPE_LAST,  /* Use only for Array size */
 
-	TYPE_VECTOR  = 0x1000,
-	TYPE_CONST   = 0x2000,
+	TYPE_VECTOR  = 0x1000u,
+	TYPE_CONST   = 0x2000u,
 
-	RAM_VOLATILE = 0x0000,
-	EEPROM       = 0x0100,
-	FLASH        = 0x0200,
+	RAM_VOLATILE = 0x0000u,
+	EEPROM       = 0x0100u,
+	FLASH        = 0x0200u,
 
-	MSK_STORAGE  = 0x0f00,
+	MSK_STORAGE  = 0x0f00u,
 
-	TYPE_FLAG    = 0xf000,
-	TYPE_MASK    = 0x000f,
+	TYPE_FLAG    = 0xf000u,
+	TYPE_MASK    = 0x000fu,
 };
 
 enum {
-	REQ_PRG_R   = 0x0001,
-	REQ_CMD_R   = 0x0002,
-  REQ_EX1_R   = 0x0004,
-	REQ_EX2_R   = 0x0008,
+	REQ_PRG_R   = 0x0001u,
+	REQ_CMD_R   = 0x0002u,
+  REQ_EX1_R   = 0x0004u,
+	REQ_EX2_R   = 0x0008u,
 
-	REQ_PRG_W   = REQ_PRG_R << 4,
-	REQ_CMD_W   = REQ_CMD_R << 4,
-	REQ_EX1_W   = REQ_EX1_R << 4,
-	REQ_EX2_W   = REQ_EX2_R << 4,
+	REQ_PRG_W   = (unsigned)REQ_PRG_R << 4,
+	REQ_CMD_W   = (unsigned)REQ_CMD_R << 4,
+	REQ_EX1_W   = (unsigned)REQ_EX1_R << 4,
+	REQ_EX2_W   = (unsigned)REQ_EX2_R << 4,
 
 	REQ_PRG     = REQ_PRG_W | REQ_PRG_R,
 	REQ_CMD     = REQ_CMD_W | REQ_CMD_R,
 	REQ_EX1     = REQ_EX1_W | REQ_EX1_R,
 	REQ_EX2     = REQ_EX2_W | REQ_EX2_R,
 	
-	REQ_ADMIN   = 0x8000,
-	FLAG_LIMIT  = 0x4000,
-	FLAG_CLIP   = 0x2000,
+	REQ_ADMIN   = 0x8000u,
+	FLAG_LIMIT  = 0x4000u,
+	FLAG_CLIP   = 0x2000u,
 
-	MSK_ACC     = 0x00ff,
-	REQ_FLAG    = 0xff00
+	MSK_ACC     = 0x00ffu,
+	REQ_FLAG    = 0xff00u
 };
 
 enum {
@@ -174,6 +174,7 @@ typedef struct _ENUM_MBR {
 typedef struct _DESCR_ENUM {
 	S16 def_value;
 	U16 cnt;
+	/* cppcheck-suppress misra-c2012-18.7 */
 	ENUM_MBR mbr[];
 } DESCR_ENUM;
 
@@ -256,9 +257,9 @@ ErrCode vc_get_max( HND, U8*, U16 );
 ErrCode vc_set_min( HND, U8*, U16 );
 ErrCode vc_set_max( HND, U8*, U16 );
 
-ErrCode vc_get_format( HND, U8* );
+ErrCode vc_get_format( HND, U16* );
 ErrCode vc_get_storage( HND, U16* );
 
 HND vc_get_hnd( char const * );
 
-int vc_dump_var( char *, U16, HND, U16 );
+int vc_dump_var( char *, int, HND, U16 );

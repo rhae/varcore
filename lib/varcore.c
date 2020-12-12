@@ -54,6 +54,7 @@
 /* header of standard C - libraries */
 #include <assert.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -66,11 +67,11 @@
 #endif
 
 #ifndef LOG_UNH_CASE
-# define LOG_UNH_CASE(x)   printf( "[%s:%d] Unhandled case %d\n", __FILE__, __LINE__, x )
+# define LOG_UNH_CASE(x)   (void) printf( "[%s:%d] Unhandled case %d\n", __FILE__, __LINE__, x )
 #endif
 
 #ifndef LOG_NOT_IMPL
-# define LOG_NOT_IMPL(x)   printf( "[%s:%d] %s not implemented\n", __FILE__, __LINE__, x )
+# define LOG_NOT_IMPL(x)   (void) printf( "[%s:%d] %s not implemented\n", __FILE__, __LINE__, x )
 #endif
 
 #ifndef countof
@@ -88,7 +89,7 @@
 
 /* list of local defined functions
 ----------------------------------------------------------------------------*/
-static int     vc_chk_vector( VAR_DESC const *, int8_t );
+static int     vc_chk_vector( VAR_DESC const *, U16 );
 static int     init_s16( VAR_DESC const *);
 static int     init_s32( VAR_DESC const *);
 static int     init_f32( VAR_DESC const *);
@@ -158,7 +159,7 @@ static inline int is_vector( VAR_DESC const *var ) {
 	int nRet;
 
 	nRet = 0;
-	if( var->type & TYPE_VECTOR ) {
+	if(( var->type & TYPE_VECTOR ) != 0u ) {
 		nRet = 1;
 	}
 
@@ -173,7 +174,7 @@ static inline ErrCode acc_allowed( VAR_DESC const *var, int rdwr, U16 req ) {
 
 	int needs_admin = var->acc_rights & REQ_ADMIN;
 	int has_admin = req & REQ_ADMIN;
-	if( rdwr == VarWrite && needs_admin != has_admin) {
+	if( (rdwr == VarWrite) && (needs_admin != has_admin)) {
 		return kErrAccessDenied;
 	}
 
@@ -201,12 +202,12 @@ static inline char const* format2str( U16 n ) {
 }
 
 static inline char const* storage2str( U16 n ) {
-	n &= MSK_STORAGE;
-	if( n >= FLASH ) {
+	U16 storage = n & MSK_STORAGE;
+	if( storage >= FLASH ) {
 		return "UNKNOWN";
 	}
-	n >>= 8;
-	return s_storage_str[n];
+	storage >>= 8u;
+	return s_storage_str[storage];
 }
 
 static inline char const *get_scpi( HND hnd ) {
@@ -219,6 +220,17 @@ static inline char const *get_scpi( HND hnd ) {
 	return (var->scpi_idx == HNON) ? "---" : &s_vc_data->data_const_str[var->scpi_idx];
 }
 
+static inline DESCR_ENUM const *get_enum_dscr( HND hnd ) {
+	VAR_DESC const *var;
+
+	var = get_var( hnd );
+	if( !var ) {
+		return 0;
+	}
+	/* cppcheck-suppress misra-c2012-11.3 */
+	return (DESCR_ENUM const *)&s_vc_data->data_mbr[var->descr_idx];
+}
+
 /*** vc_init ****************************************************************/
 /**
  *
@@ -227,9 +239,8 @@ static inline char const *get_scpi( HND hnd ) {
 ErrCode vc_init( VC_DATA const *vc ) {
 
 	s_vc_data = vc;
-	vc_reset();
 	
-	return kErrNone;
+	return vc_reset();
 }
 
 ErrCode vc_reset() {
@@ -238,7 +249,7 @@ ErrCode vc_reset() {
 	HND     var_cnt = s_vc_data->var_cnt;
 	ErrCode E       = kErrNone;
 
-	for( HND hVar = 0; E == kErrNone && hVar < var_cnt; hVar++ ) {
+	for( HND hVar = 0; (E == kErrNone) && (hVar < var_cnt); hVar++ ) {
 		VAR_DESC const *var  = get_var(hVar);
 		U16             type = var->type & TYPE_MASK;
 		
@@ -264,7 +275,11 @@ ErrCode vc_reset() {
 				break;
 
 			case TYPE_STRING:
-				init_string( var );
+				E = init_string( var );
+				break;
+
+			default:
+				LOG_UNH_CASE( type );
 				break;
 		}
 	}
@@ -357,7 +372,7 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 		return ret;
 	}
 
-  	if( chan > 0 ) {
+  if( chan > 0u ) {
 		ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
@@ -370,29 +385,38 @@ ErrCode vc_as_int16( HND hnd, int rdwr, S16 *val, U16 chan, U16 req ) {
 	else {
 		if( TYPE_INT16 == type ) {
 			U16 flags = var->acc_rights & REQ_FLAG;
-			if( flags ) {
-				if( flags & FLAG_LIMIT ) {
+			if( flags != 0u ) {
+				if(( flags & FLAG_LIMIT ) != 0u ) {
 					if( *val > data->max ) {
 						return kErrUpperLimit;
 					}
 					else if ( *val < data->min ) {
 						return kErrLowerLimit;
 					}
+					else {
+						; /* misra-c2012-15.7 */
+					}
 				}
-				else if ( flags & FLAG_CLIP ) {
+				else if (( flags & FLAG_CLIP ) != 0u ) {
 					if( *val > data->max ) {
 						*val = data->max;
 					}
 					else if ( *val < data->min ) {
 						*val = data->min;
 					}
+					else {
+						; /* misra-c2012-15.7 */
+					}
+				}
+				else {
+					; /* misra-c2012-15.7 */
 				}
 			}
 
 			data->def_value = *val;
 		}
 		else {
-			DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->descr_idx];
+			DESCR_ENUM const *dscr = get_enum_dscr( hnd );
 			ret = valid_enum( dscr, *val );
 			if( ret == kErrNone ) {
 				*data_enum = *val;
@@ -441,7 +465,7 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 		return ret;
 	}
 
-  if( chan > 0) {
+  if( chan > 0u ) {
 		ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
@@ -453,22 +477,31 @@ ErrCode vc_as_int32( HND hnd, int rdwr, S32 *val, U16 chan, U16 req ) {
 	}
 	else {
 		U16 flags = var->acc_rights & REQ_FLAG;
-		if( flags ) {
-			if( flags & FLAG_LIMIT ) {
+		if( flags != 0u ) {
+			if(( flags & FLAG_LIMIT ) != 0u ) {
 				if( *val > data->max ) {
 					return kErrUpperLimit;
 				}
 				else if ( *val < data->min ) {
 					return kErrLowerLimit;
 				}
+				else {
+					; /* misra-c2012-15.7 */
+				}
 			}
-			else if ( flags & FLAG_CLIP ) {
+			else if (( flags & FLAG_CLIP ) != 0u ) {
 				if( *val > data->max ) {
 					*val = data->max;
 				}
 				else if ( *val < data->min ) {
 					*val = data->min;
 				}
+				else {
+					; /* misra-c2012-15.7 */
+				}
+			}
+			else {
+				; /* misra-c2012-15.7 */
 			}
 		}
 		data->def_value = *val;
@@ -514,7 +547,7 @@ ErrCode vc_as_float( HND hnd, int rdwr, F32 *val, U16 chan, U16 req ) {
 		return ret;
 	}
 
-  	if( chan > 0 ) {
+  	if( chan > 0u ) {
 		ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
@@ -526,22 +559,31 @@ ErrCode vc_as_float( HND hnd, int rdwr, F32 *val, U16 chan, U16 req ) {
 	}
 	else {
 		U16 flags = var->acc_rights & REQ_FLAG;
-		if( flags ) {
-			if( flags & FLAG_LIMIT ) {
+		if( flags != 0u ) {
+			if(( flags & FLAG_LIMIT ) != 0u ) {
 				if( *val > data->max ) {
 					return kErrUpperLimit;
 				}
 				else if ( *val < data->min ) {
 					return kErrLowerLimit;
 				}
+				else {
+					; /* misra-c2012-15.7 */
+				}
 			}
-			else if ( flags & FLAG_CLIP ) {
+			else if (( flags & FLAG_CLIP ) != 0u ) {
 				if( *val > data->max ) {
 					*val = data->max;
 				}
 				else if ( *val < data->min ) {
 					*val = data->min;
 				}
+				else {
+					; /* misra-c2012-15.7 */
+				}
+			}
+			else {
+					; /* misra-c2012-15.7 */
 			}
 		}
 		data->def_value = *val;
@@ -597,7 +639,8 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 
 				errno = 0;
 				n = strtol( (char*)val, &endp, 0 );
-				if( errno != 0 || (char*)val == endp || *endp != '\0' || n > 32767 || n < -32768) {
+				if(( errno != 0 ) || ((char*)val == endp ) || (*endp != '\0') ||
+				   ( n > SHRT_MAX ) || ( n < SHRT_MIN )) {
 					return kErrInvalidValue;
 				}
 				n16 = (S16) n;
@@ -611,15 +654,16 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 					switch( var->fmt ) {
 
 						case FMT_HEX2:
-							sprintf( p, "%#hx", n16 );
+							(void) sprintf( p, "%#hx", n16 );
 							break;
 
 						case FMT_HEX4:
-						  sprintf( p, "%#hx", n16 );
+						  (void) sprintf( p, "%#hx", n16 );
 							break;
 
 						default:
-							sprintf( p, "%d", n16 );
+							(void) sprintf( p, "%d", n16 );
+							break;
 					}
 				}
 			}
@@ -632,7 +676,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 
 				errno = 0;
 				n = strtol( (char*)val, &endp, 0 );
-				if( errno != 0 || (char*)val == endp || *endp != '\0' ) {
+				if(( errno != 0 ) || ((char*)val == endp ) || ( *endp != '\0' )) {
 					return kErrInvalidValue;
 				}
 				ret = vc_as_int32( hnd, rdwr, &n, chan, req );
@@ -654,19 +698,20 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 					switch( fmt ) {
 
 						case FMT_HEX2:
-							sprintf( p, "%#hx", n16 );
+							(void) sprintf( p, "%#hx", n16 );
 							break;
 
 						case FMT_HEX4:
-							sprintf( p, "%#hx", n16 );
+							(void) sprintf( p, "%#hx", n16 );
 							break;
 
 						case FMT_HEX8:
-						  sprintf( p, "%#x", n );
+						  (void) sprintf( p, "%#x", n );
 							break;
 
 						default:
-							sprintf( p, "%d", n );
+							(void) sprintf( p, "%d", n );
+							break;
 					}
 				}
 			}
@@ -679,7 +724,7 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 
 				errno = 0;
 				f = strtof( (char*)val, &endp );
-				if( errno != 0 || (char*)val == endp || *endp != '\0' ) {
+				if(( errno != 0 ) || ((char*)val == endp) || ( *endp != '\0' )) {
 					return kErrInvalidValue;
 				}
 				ret = vc_as_float( hnd, rdwr, &f, chan, req );
@@ -696,11 +741,12 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 						case FMT_PREC_2:
 						case FMT_PREC_3:
 						case FMT_PREC_4:
-						  sprintf( p, "%.*f", var->fmt, f );
+						  (void) sprintf( p, "%.*f", var->fmt, f );
 							break;
 
 						default:
-							sprintf( p, "%f", f );
+							(void) sprintf( p, "%f", f );
+							break;
 					}
 					
 				}
@@ -709,14 +755,14 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 
 		case TYPE_STRING:
 		{
-			if( chan > 0) {
+			if( chan > 0u ) {
 				ret = vc_chk_vector( var, chan );
 				if( ret != kErrNone ) {
 					return ret;
 				}
 			}
 
-			if( flags & TYPE_CONST ) {
+			if(( flags & TYPE_CONST ) != 0 ) {
 
 				if( rdwr == VarWrite ) {
 					return kErrAccessDenied;
@@ -725,12 +771,12 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 				S32 idx = var->descr_idx;
 				DATA_STRING const *data = &s_vc_data->data_const_str[idx];
 				size_t len = strlen(data);
-				len = (len >= sizeof(STRBUF)) ? sizeof(STRBUF)-1 : len;
-				memcpy( val, data, len );
+				len = (len >= sizeof(STRBUF)) ? (sizeof(STRBUF) - 1u ) : len;
+				(void) memcpy( val, data, len );
 				val[len] = '\0';
 			}
 			else {
-				S32 idx = var->data_idx + chan * sizeof(STRBUF);
+				S32 idx = var->data_idx + (chan * sizeof(STRBUF));
 				S32 max_idx = sizeof(STRBUF) * s_vc_data->data_str_cnt;
 				if( idx > max_idx ) {
 					return kErrInvalidChan;
@@ -742,11 +788,11 @@ ErrCode vc_as_string( HND hnd, int rdwr, char *val, U16 chan, U16 req ) {
 					if( len > sizeof(STRBUF)) {
 						return kErrSizeTooBig;
 					}
-					memcpy( data, val, sizeof(STRBUF));
+					(void) memcpy( data, val, sizeof(STRBUF));
 				}
 				else {
-					memcpy( val, data, sizeof(STRBUF));
-					val[sizeof(STRBUF)-1] = '\0';
+					(void) memcpy( val, data, sizeof(STRBUF));
+					val[sizeof(STRBUF)-1u] = '\0';
 				}
 			}
 		}
@@ -823,7 +869,7 @@ ErrCode vc_set_max( HND hnd, U8* val, U16 chan ) {
  *   @param hnd    Variable handle
  *   @param fmt    Pointer to format
  */
-ErrCode vc_get_format( HND hnd, U8 *fmt ) {
+ErrCode vc_get_format( HND hnd, U16 *fmt ) {
 	VAR_DESC const *var;
 
 	assert( hnd < s_vc_data->var_cnt );
@@ -874,7 +920,7 @@ HND vc_get_hnd( char const *scpi ) {
 
 		char const *s = get_scpi( i );
 
-		if( s ) {
+		if( s != NULL ) {
 			int res = strcmp( scpi, s );
 			if( 0 == res ) {
 				return i;
@@ -891,8 +937,8 @@ static int add_sep( char *buf, int bufsz, char c, int len ) {
 	assert( buf );
 	assert( len > 0 );
 
-	n = len > bufsz ? bufsz : len;
-	memset( buf, c, n );
+	n = (len > bufsz) ? bufsz : len;
+	(void) memset( buf, c, n );
 
 	if(( n+2 ) < bufsz ) {
 		buf[n] = '\n'; n++;
@@ -914,11 +960,11 @@ static int add_sep( char *buf, int bufsz, char c, int len ) {
  *   @param hnd    Variable handle
  *   @param chan   Channel
  */
-int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
+int vc_dump_var( char *buf, int bufsz, HND hnd, U16 chan ) {
 	#define CHECK_LEN( b, n, l, s ) do { \
-     if( n < 0 || (l+n) >= s ) {  \
-			 b[l] = '\0'; \
-			 return l; \
+     if( ((n) < 0) || ((l)+(n)) >= (s) ) {  \
+			 (b)[(l)] = '\0'; \
+			 return (l); \
 		 } \
 	} while(0)
 
@@ -928,19 +974,18 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 	U16 type;
 	U16 storage;
 	int n;
-	int i;
-	U16 len = 0;
+	int len = 0;
 	char const *scpi;
 
 	if( hnd >= s_vc_data->var_cnt ) {
 		return kErrUnknownCmd;
 	}
 
-	memset( spaces, ' ', sizeof(STRBUF));
+	(void) memset( spaces, ' ', sizeof(STRBUF));
 
 	var     = get_var( hnd );
 	type    = var->type & TYPE_MASK;
-	storage = (var->type & MSK_STORAGE) >> 8;
+	storage = (var->type & (U16)MSK_STORAGE) >> 8u;
 	scpi    = get_scpi( hnd );
 
 	n = add_sep( &buf[len], bufsz - len, '=', 50 );
@@ -984,16 +1029,16 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 			CHECK_LEN( buf, n, len, bufsz );
 			len += n;
 
-			if( var->vec_items == 1 ) {
+			if( var->vec_items == 1u ) {
 				n = snprintf( &buf[len], bufsz - len, "     ");
 				CHECK_LEN( buf, n, len, bufsz );
 				len += n;
 			}
 
-			for( i = 0; i < var->vec_items; i++ ) {
+			for( U16 i = 0; i < var->vec_items; i++ ) {
 				DATA_S16 *d = &s_vc_data->data_s16[var->data_idx + i];
 
-				if( var->vec_items > 1 ) {
+				if( var->vec_items > 1u ) {
 					n = snprintf( &buf[len], bufsz - len, " %3d:", i );
 					CHECK_LEN( buf, n, len, bufsz );
 					len += n;	
@@ -1010,16 +1055,16 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 			CHECK_LEN( buf, n, len, bufsz );
 			len += n;
 
-			if( var->vec_items == 1 ) {
+			if( var->vec_items == 1u ) {
 				n = snprintf( &buf[len], bufsz - len, "     ");
 				CHECK_LEN( buf, n, len, bufsz );
 				len += n;
 			}
 
-			for( i = 0; i < var->vec_items; i++ ) {
+			for( U16 i = 0; i < var->vec_items; i++ ) {
 				DATA_S32 *d = &s_vc_data->data_s32[var->data_idx + i];
 
-				if( var->vec_items > 1 ) {
+				if( var->vec_items > 1u ) {
 					n = snprintf( &buf[len], bufsz - len, " %3d:", i );
 					CHECK_LEN( buf, n, len, bufsz );
 					len += n;	
@@ -1035,16 +1080,16 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 			CHECK_LEN( buf, n, len, bufsz );
 			len += n;
 
-			if( var->vec_items == 1 ) {
+			if( var->vec_items == 1u ) {
 				n = snprintf( &buf[len], bufsz - len, "     ");
 				CHECK_LEN( buf, n, len, bufsz );
 				len += n;
 			}
 
-			for( i = 0; i < var->vec_items; i++ ) {
+			for( U16 i = 0; i < var->vec_items; i++ ) {
 				DATA_F32 *d = &s_vc_data->data_f32[var->data_idx + i];
 
-				if( var->vec_items > 1 ) {
+				if( var->vec_items > 1u ) {
 					n = snprintf( &buf[len], bufsz - len, " %3d:", i );
 					CHECK_LEN( buf, n, len, bufsz );
 					len += n;	
@@ -1059,53 +1104,61 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
 
 		case TYPE_ENUM:
 			{
-				DESCR_ENUM const *dscr = (DESCR_ENUM const *)&s_vc_data->data_mbr[var->descr_idx];
-				for( i = 0; i < dscr->cnt; i++ ) {
+				DESCR_ENUM const *dscr = get_enum_dscr( hnd );
+				for( U16 i = 0; i < dscr->cnt; i++ ) {
 					ENUM_MBR const *mbr = (ENUM_MBR const *)&dscr->mbr[i];
 					STRBUF S;
-					int flag = 0;
-					int x;
 
-					vc_as_string( mbr->hnd, VarRead, S, chan, REQ_PRG );
-					x = strlen( S );
-					spaces[11-x] = '\0';
-					n = snprintf( &buf[len], bufsz - len, "%2d:  %s%s %4d", i, S, spaces, mbr->value );
-					spaces[11-x] = ' ';
-					CHECK_LEN( buf, n, len, bufsz );
-					len += n;
-						
-					for( U16 c = 0; c < var->vec_items; c++ ) {
-						U16 idx = var->data_idx + c;
-						DATA_ENUM *d = (DATA_ENUM *)&s_vc_data->data_enum[idx];
+					ErrCode E = vc_as_string( mbr->hnd, VarRead, S, chan, REQ_PRG );
+					if( kErrNone == E ) {
+						int flag = 0;
+						int x;
 
-						if( *d == mbr->value ) {
-							if( !flag ) {
-								n = snprintf( &buf[len], bufsz - len, " <= [" );
-								flag = 1;
+						x = strlen( S );
+						spaces[11-x] = '\0';
+						n = snprintf( &buf[len], bufsz - len, "%2d:  %s%s %4d", i, S, spaces, mbr->value );
+						spaces[11-x] = ' ';
+						CHECK_LEN( buf, n, len, bufsz );
+						len += n;
+							
+						for( U16 c = 0; c < var->vec_items; c++ ) {
+							U16 idx = var->data_idx + c;
+							/* cppcheck-suppress misra-c2012-11.8 */
+							DATA_ENUM *d = (DATA_ENUM *)&s_vc_data->data_enum[idx];
+
+							if( *d == mbr->value ) {
+								if( !flag ) {
+									n = snprintf( &buf[len], bufsz - len, " <= [" );
+									flag = 1;
+								}
+								else {
+									n = snprintf( &buf[len], bufsz - len, ", " );
+								}
+								CHECK_LEN( buf, n, len, bufsz );
+								len += n;
+
+								n = snprintf( &buf[len], bufsz - len, "%u", c+1u );
+								CHECK_LEN( buf, n, len, bufsz );
+								len += n;
 							}
-							else {
-								n = snprintf( &buf[len], bufsz - len, ", " );
-							}
-							CHECK_LEN( buf, n, len, bufsz );
-							len += n;
-
-							n = snprintf( &buf[len], bufsz - len, "%d", c+1 );
-							CHECK_LEN( buf, n, len, bufsz );
-							len += n;
 						}
-					}
 
-					if( flag ) {
-						n = snprintf( &buf[len], bufsz - len, "]\n" );
+						if( flag != 0 ) {
+							n = snprintf( &buf[len], bufsz - len, "]\n" );
+						}
+						else {
+							n = snprintf( &buf[len], bufsz - len, "\n" );
+						}
+						CHECK_LEN( buf, n, len, bufsz );
+						len += n;
 					}
-					else {
-						n = snprintf( &buf[len], bufsz - len, "\n" );
-					}
-					CHECK_LEN( buf, n, len, bufsz );
-					len += n;
 				}
 			}
 			break;
+
+			default:
+				LOG_UNH_CASE( type );
+				break;
 	}
 
 	n = add_sep( &buf[len], bufsz - len, '=', 50 );
@@ -1120,12 +1173,12 @@ int vc_dump_var( char *buf, U16 bufsz, HND hnd, U16 chan ) {
  *
  *
  */
-static ErrCode vc_chk_vector( VAR_DESC const *var, int8_t chan )
+static ErrCode vc_chk_vector( VAR_DESC const *var, U16 chan )
 {
 	int ret;
 
 	ret = kErrNoVector;
-	if ( is_vector( var )) {
+	if ( is_vector( var ) != 0 ) {
 		ret = kErrNone;
 		if(chan >= var->vec_items) {
 			ret = kErrInvalidChan;
@@ -1146,7 +1199,7 @@ static ErrCode init_s16( VAR_DESC const *var ) {
 	DATA_S16 const *descr = &s_vc_data->descr_s16[var->descr_idx];
 	DATA_S16       *data  = &s_vc_data->data_s16[var->data_idx];
 
-	memcpy( data, descr, sizeof(DATA_S16) * var->vec_items );
+	(void) memcpy( data, descr, sizeof(DATA_S16) * var->vec_items );
 	return kErrNone;
 }
 
@@ -1162,7 +1215,7 @@ static ErrCode init_s32( VAR_DESC const *var ) {
 	DATA_S32 const *descr = &s_vc_data->descr_s32[var->descr_idx];
 	DATA_S32       *data  = &s_vc_data->data_s32[var->data_idx];
 
-	memcpy( data, descr, sizeof(DATA_S32) * var->vec_items );
+	(void) memcpy( data, descr, sizeof(DATA_S32) * var->vec_items );
 	return kErrNone;
 }
 
@@ -1178,7 +1231,7 @@ static ErrCode init_f32( VAR_DESC const *var ) {
 	DATA_F32 const *descr = &s_vc_data->descr_f32[var->descr_idx];
 	DATA_F32       *data  = &s_vc_data->data_f32[var->data_idx];
 
-	memcpy( data, descr, sizeof(DATA_F32) * var->vec_items );
+	(void) memcpy( data, descr, sizeof(DATA_F32) * var->vec_items );
 	return kErrNone;
 }
 
@@ -1194,7 +1247,7 @@ static ErrCode init_f64( VAR_DESC const *var ) {
 	DATA_F64 const *descr = &s_vc_data->descr_f64[var->descr_idx];
 	DATA_F64       *data  = &s_vc_data->data_f64[var->data_idx];
 
-	memcpy( data, descr, sizeof(DATA_F64) * var->vec_items );
+	(void) memcpy( data, descr, sizeof(DATA_F64) * var->vec_items );
 	return kErrNone;
 }
 
@@ -1207,10 +1260,11 @@ static ErrCode init_f64( VAR_DESC const *var ) {
  *   @return kErrNone, when done.
  */
 static ErrCode init_enum( VAR_DESC const *var ) {
+	/* cppcheck-suppress [misra-c2012-11.3, misra-c2012-11.8] */
 	DESCR_ENUM const *descr = (DESCR_ENUM*)&s_vc_data->data_mbr[var->descr_idx];
 	S16              *data  = &s_vc_data->data_enum[var->data_idx];
     
-	for( int i = 0; i < var->vec_items; i++ ) {
+	for( U16 i = 0; i < var->vec_items; i++ ) {
 		*data = descr->def_value;
 		data++;
 	}
@@ -1230,14 +1284,15 @@ static int  init_string( VAR_DESC const *var ) {
 	DATA_STRING       *data  = &s_vc_data->data_str[var->data_idx];
 	U16 flags = var->type & TYPE_FLAG;
 
-	if( flags & TYPE_CONST ) {
+	if(( flags & TYPE_CONST ) != 0u ) {
 		return kErrNone;
 	}
     
 	size_t len = strlen( descr );
+	U16 idx = 0;
 	for( U16 i = 0; i < var->vec_items; i++ ) {
-		memcpy( data, descr, len );
-		data += sizeof(STRBUF);
+		(void) memcpy( &data[idx], descr, len );
+		idx += sizeof(STRBUF);
 	}
 	return kErrNone;
 }
@@ -1278,10 +1333,12 @@ static ErrCode valid_enum( DESCR_ENUM const *dscr, S16 val ) {
 static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag ) {
 	U16 type;
 
+  /* cppcheck-suppress misra-c2012-19.2 */
 	union {
 		/*U8   bytes[4];*/
 		S32  val_s32;
     F32  val_f32;
+		/* cppcheck-suppress misra-c2012-19.2 */
 	} conv;
 
 	DATA_S16 *data_s16;
@@ -1290,8 +1347,8 @@ static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag ) {
 
 	VAR_DESC const *var;
 
-	int minmax = flag & 1;
-	int wr     = (flag & 2) >> 1;
+	int minmax = flag & 1u;
+	int wr     = (flag & 2u) >> 1u;
 	
 	assert( s_vc_data );
 	
@@ -1306,7 +1363,7 @@ static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag ) {
 	var = get_var( hnd );
 	type = var->type & TYPE_MASK;
 
-	if( chan > 0 ) {
+	if( chan > 0u ) {
 		ErrCode ret = vc_chk_vector( var, chan );
 		if( ret != kErrNone ) {
 			return ret;
@@ -1316,35 +1373,41 @@ static ErrCode rw_min_max( HND hnd, U8* val, U16 chan, U16 flag ) {
 	switch( type ) {
 		case TYPE_INT16:
 			data_s16 = &s_vc_data->data_s16[ var->data_idx + chan ];
-			if( wr ) {
+			if( wr != 0 ) {
 				S16 *p = (0 == minmax) ? &data_s16->min : &data_s16->max;
+				/* cppcheck-suppress misra-c2012-11.3 */
 				*p = *(S16*)val;
 			}
 			else {
+				/* cppcheck-suppress misra-c2012-11.3 */
 				*(S16*) val = (0 == minmax) ? data_s16->min : data_s16->max;
 			}
 			break;
 
 		case TYPE_INT32:
 			data_s32 = &s_vc_data->data_s32[ var->data_idx + chan ];
-			if( wr ) {
+			if( wr != 0 ) {
 				S32 *p = (0 == minmax) ? &data_s32->min : &data_s32->max;
+				/* cppcheck-suppress misra-c2012-11.3 */
 				*p = *(S32*)val;
 			}
 			else {
+				/* cppcheck-suppress misra-c2012-11.3 */
 				*(S32*) val = (0 == minmax) ? data_s32->min : data_s32->max;
 			}
 			break;
 
 		case TYPE_FLOAT:
 			data_f32 = &s_vc_data->data_f32[ var->data_idx + chan ];
-			if( wr ) {
+			if( wr != 0 ) {
 				F32 *p = (0 == minmax) ? &data_f32->min : &data_f32->max;
+				/* cppcheck-suppress misra-c2012-11.3 */
 				conv.val_s32 = *(S32 *)val;
 				*p = conv.val_f32;
 			}
 			else {
 				conv.val_f32 = (0 == minmax) ? data_f32->min : data_f32->max;
+				/* cppcheck-suppress misra-c2012-11.3 */
 				*(S32*) val = conv.val_s32;
 			}
 			break;

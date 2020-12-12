@@ -50,7 +50,6 @@ void split(
 {
   uint32_t vcnt; // vector counter
   uint32_t cnt;
-  uint32_t mark;
   char* buf;
 
   vcnt = 0;
@@ -58,6 +57,7 @@ void split(
   buf = (char*) svec;
 
   while((*s != '\0') && (vcnt < *u)) {
+    uint32_t mark;
 
     mark = 1;
     if( cnt < len ) {

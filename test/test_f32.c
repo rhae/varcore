@@ -287,7 +287,7 @@ static void get_format() {
   U16 format = 0;
   ErrCode ret;
 
-  ret = vc_get_format( VAR_CUR, (U8*)&format );
+  ret = vc_get_format( VAR_CUR, &format );
   CU_ASSERT_EQUAL16( ret, kErrNone );
   CU_ASSERT_EQUAL( format, FMT_PREC_1 );
 }
