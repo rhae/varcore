@@ -1,0 +1,3 @@
+[submodule "thirdparty/cunit"]
+	path = thirdparty/cunit
+	url = https://gitlab.com/cunity/cunit.git
