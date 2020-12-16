@@ -12,8 +12,6 @@ project(
   VERSION 0.1
   LANGUAGES C CXX )
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR
     "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(warnings "-W -Wall -Wextra")
@@ -68,6 +66,20 @@ add_subdirectory(examples)
 
 add_subdirectory(thirdparty/cunit)
 add_subdirectory(test)
+
+# target zoo is always built
+add_custom_target( run_test ALL
+    COMMAND test/test
+    # If the file exists, then commands related to that file won't be executed
+    # DONOT let other target depends on the same OUTPUT as current target,
+    #   or it may be bad when doing parallel make
+    DEPENDS test
+
+    COMMENT "run unit tests"
+
+    # to make quotes printable,for example
+    VERBATIM
+)
 
 set(CONFIGURED_ONCE TRUE CACHE INTERNAL
     "A flag showing that CMake has configured at least once.")
