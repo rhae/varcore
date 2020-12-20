@@ -67,7 +67,7 @@ static int suite_clean(void) {
 }
 
 
-static void get_scpi() {
+static void get_scpi( void ) {
   HND hnd;
 
   hnd = vc_get_hnd( "IDN" );

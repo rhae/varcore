@@ -1111,7 +1111,7 @@ int vc_dump_var( char *buf, int bufsz, HND hnd, U16 chan ) {
 					ErrCode E = vc_as_string( mbr->hnd, VarRead, S, chan, REQ_PRG );
 					if( kErrNone == E ) {
 						int flag = 0;
-						int x;
+						size_t x;
 
 						x = strlen( S );
 						spaces[11-x] = '\0';

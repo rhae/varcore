@@ -30,7 +30,7 @@ int console_read( char *buf, int bufsz, void *priv ) {
 
   char *s = fgets( buf, bufsz, d->fd_in );
   if( s == buf ) {
-    return strlen( buf );
+    return (int) strlen( buf );
   }
 
   if( feof( d->fd_in )) {

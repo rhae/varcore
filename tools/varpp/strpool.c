@@ -92,7 +92,7 @@ StringItem *strpool_Get( StringPool *sp, char const *s ) {
   return item;
 }
 
-int strpool_MaxLen( StringPool *sp ) {
+size_t strpool_MaxLen( StringPool *sp ) {
   return sp->MaxLen;
 }
 

@@ -1,22 +1,22 @@
 /*
  *  Copyright (c) 2020, Ruediger Haertel
  *  All rights reserved.
- *  
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
- *  
+ *
  *  1. Redistributions of source code must retain the above copyright notice,
  *     this list of conditions and the following disclaimer.
- *  
+ *
  *  2. Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- *  
+ *
  *  3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
- *  
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -70,9 +70,9 @@ void split(
         cnt = len;
       }
       buf[cnt] = '\0';
-      cnt = -1;
+      cnt = (uint32_t)-1;
       vcnt++;
-      buf = (char*) ((long) svec + (vcnt * len));
+      buf = (char*) ((ptrdiff_t) svec + (vcnt * len));
     }
 
     cnt++;
@@ -81,7 +81,7 @@ void split(
   *u = vcnt + 1;
 
   for( uint32_t n = 0; n < *u; n++ ) {
-    char *p = (char*) ((long) svec + (n * len));
+    char *p = (char*) ((ptrdiff_t) svec + (n * len));
     strtrim( p, '"' );
   }
 }
@@ -90,10 +90,12 @@ void split(
 /**
  *
  */
-char* srepeat(char c, uint16_t len)
+char* srepeat(char c, size_t len)
 {
   static char buf[65336];
   int i;
+
+  len = len < 65336 ? len : 65335;
   for ( i = 0; i < len; i++ )
   {
     buf[i] = c;
@@ -110,7 +112,7 @@ char* srepeat(char c, uint16_t len)
 char* strtrim(char* s, char c)
 {
   int i;
-  int nLen;
+  size_t nLen;
   char *p;
 
   assert( s != 0 );

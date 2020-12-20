@@ -16,7 +16,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR
     "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(warnings "-W -Wall -Wextra")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    set(warnings "/W4 /WX /EHsc")
+    set(warnings "/W3 /EHsc")
 endif()
 if (NOT CONFIGURED_ONCE)
     set(CMAKE_CXX_FLAGS "${warnings}"
@@ -69,7 +69,7 @@ add_subdirectory(test)
 
 # target zoo is always built
 add_custom_target( run_test ALL
-    COMMAND test/test
+    COMMAND test
     # If the file exists, then commands related to that file won't be executed
     # DONOT let other target depends on the same OUTPUT as current target,
     #   or it may be bad when doing parallel make

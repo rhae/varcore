@@ -52,7 +52,7 @@ int main(int argc, char **argv ) {
 
 void repl_run( char const *prompt ) {
 
-  int prompt_len = strlen( prompt );
+  int prompt_len = (int) strlen( prompt );
 
   textio_write( "varcore repl!\n", 13 );
   textio_write( "Press <CTL-D> to exit.\n", 24 );

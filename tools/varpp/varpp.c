@@ -1,21 +1,21 @@
 /*
  *  Copyright (c) 2020, Ruediger Haertel
  *  All rights reserved.
- *  
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
- *  
+ *
  *  1. Redistributions of source code must retain the above copyright notice, this
  *     list of conditions and the following disclaimer.
- *  
+ *
  *  2. Redistributions in binary form must reproduce the above copyright notice,
  *     this list of conditions and the following disclaimer in the documentation
  *     and/or other materials provided with the distribution.
- *  
+ *
  *  3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
- *  
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -69,6 +69,10 @@
 #define str( s ) #s
 #define xstr( s ) str(x)
 
+#ifdef _WIN32
+# define PATH_MAX _MAX_PATH
+#endif
+
 enum {BufSize = 256};
 
 typedef enum {
@@ -110,7 +114,7 @@ typedef struct _PP_DATA_STRING {
 typedef struct _DataItem {
   STRBUF hnd;
   STRBUF scpi;
-  
+
   int acc_rights;
   int vec_items;
   int storage;
@@ -182,6 +186,11 @@ void handle_pragma( char const*, LOC const* );
 char *get_path( char *path, char const *fname );
 char *join_path( char *oname, char const *path, char const *fname );
 
+#ifdef _WIN32
+char      *realpath(const char *path, char *resolved_path);
+struct tm *localtime_r( const time_t *timer, struct tm * result );
+#endif
+
 typedef struct _Stats {
   size_t max_var_hnd_len;
 } Stats;
@@ -199,7 +208,7 @@ StringPool    s_StrPools[spMax];
  * The s_EnumPool is a string pool that contains the
  * serialized enum member description and a pointer to the
  * PP_DATA_ENUM of the DataItem.
- * 
+ *
  * The enum pool ist the key to remove duplicate enuum descriptors.
  */
 StringPool    s_EnumPool;
@@ -305,8 +314,14 @@ int main( int argc, char **argv )
   return res;
 }
 
-char *get_path( char* path, char const *fname ) {
+#ifdef _WIN32
+  #define PATH_SEP '\\'
+#else
   #define PATH_SEP '/'
+#endif
+
+
+char *get_path( char* path, char const *fname ) {
   char *p;
 
   if( !path ) {
@@ -318,8 +333,8 @@ char *get_path( char* path, char const *fname ) {
     *path = '\0';
   }
   else {
-    int len;
-    len = p - fname;
+    size_t len;
+    len = (size_t) (p - fname);
     memcpy( path, fname, len );
     *(path + len) = '\0';
   }
@@ -329,12 +344,6 @@ char *get_path( char* path, char const *fname ) {
 
 char *join_path( char *oname, char const *path, char const *fname )
 {
-#ifdef _WIN32
-  #define PATH_SEP '\\'
-#else
-  #define PATH_SEP '/'
-#endif
-
   int have_path = 0;
   if( path && strlen(path) > 0) {
     have_path = 1;
@@ -516,7 +525,7 @@ static void write_header( FILE *fp, char const *description ) {
 
   t = time(NULL);
   localtime_r(&t, &tmp);
-  
+
   strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", &tmp);
 
   fprintf( fp, "/**\n"
@@ -562,7 +571,7 @@ int save_inc_file( DataItem *head, char *szFilename )
 
 
   LL_FOREACH( head, item ) {
-    int len = strlen( item->hnd );
+    size_t len = strlen( item->hnd );
     char *spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
     fprintf(fp, "#define %s%s  0x%04x\n", item->hnd, spaces, i);
     i++;
@@ -615,13 +624,13 @@ int save_var_file( DataItem *head, char *szFilename )
     }
 
     si->offset = scpi_idx;
-    scpi_idx += strlen( si->buf ) +1;
+    scpi_idx += (S16) (strlen( si->buf ) +1);
   }
 
   scpi_ofs = scpi_idx;
   LL_FOREACH( head, item ) {
 
-    int len = strlen( item->hnd );
+    size_t len = strlen( item->hnd );
     char *spaces = srepeat( ' ', 2 + s_Stats.max_var_hnd_len - len );
     int type = item->type & TYPE_MASK;
     int flags = item->type & TYPE_FLAG;
@@ -696,7 +705,7 @@ int save_var_file( DataItem *head, char *szFilename )
         {
           PP_DATA_STRING *p = (PP_DATA_STRING*) &item->data.data_string;
           size_t slen = strlen( p->def_value ) +1;
-          descr_cnt[type] += slen;
+          descr_cnt[type] += (S16) slen;
 
           if( TYPE_CONST != flags ) {
             data_cnt[type] += sizeof(STRBUF) * item->vec_items;
@@ -809,7 +818,7 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
   }
 
   LL_FOREACH( head, item ) {
-    int len;
+    size_t len;
     char *spaces;
     PP_DATA_NUMBER    *data_number    = &item->data.data_number;
 
@@ -842,7 +851,7 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
         case TYPE_INT16:
         case TYPE_INT32:
           min = (S32)data_number->min;
-          max = (S32)data_number->max; 
+          max = (S32)data_number->max;
           def_value = (S32)data_number->def_value;
           fprintf( fp, zfmt, def_value, min, max );
           break;
@@ -870,7 +879,7 @@ int  save_data_int( FILE *fp, DataItem *head, char const *name, int type, int de
     // Emit an array of size 1. This prohibits a warning from the compiler.
     fprintf( fp, "%d];\n\n", (0 == data_cnt) ? 1 : data_cnt );
   }
-  
+
 
   return 0;
 }
@@ -955,7 +964,7 @@ int  save_data_string( FILE *fp, DataItem *head, char const *name, int type )
     fprintf( fp, "%d];\n", (0 == data_cnt) ? 1 : data_cnt );
   }
 
-  return 0;  
+  return 0;
 }
 
 int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int type ) {
@@ -1032,7 +1041,7 @@ int  save_data_const_string( FILE *fp, DataItem *head, char const *name, int typ
   }
   fputs( ", 0\n};\n\n", fp );
 
-  return 0;  
+  return 0;
 }
 
 int enum_get_def( PP_DATA_ENUM const *data ) {
@@ -1098,7 +1107,7 @@ int  save_data_enum( FILE *fp, DataItem *head, char const *name, int type )
 
     i++;
   }
-  
+
   if( init_data ) {
     fputs( "\n};\n\n", fp );
   }
@@ -1164,7 +1173,7 @@ int  save_data_enum_mbr( FILE *fp, DataItem *head, char const *name, int type )
         fprintf(fp, "%d, %d,\n    ", def_val, data->cnt );
       }
       else {
-        fprintf(fp, ",\n    " );  
+        fprintf(fp, ",\n    " );
       }
       fprintf(fp, "%s,%s % 4d, % 4d", mbr->hnd, spaces, mbr->value, -1 );
       mbr = mbr->next;
@@ -1190,9 +1199,12 @@ enum {
   };
 
   size_t cnt_total = 0;
-  size_t cnt_data[kTypeLastPP+1] = {};
-  size_t cnt_descr[kTypeLastPP+1] = {};
+  size_t cnt_data[kTypeLastPP+1];
+  size_t cnt_descr[kTypeLastPP+1];
   DataItem *item;
+
+  memset( cnt_data, 0, sizeof(cnt_data));
+  memset( cnt_descr, 0, sizeof(cnt_descr));
 
   LL_FOREACH( head, item ) {
     int type = item->type & TYPE_MASK;
@@ -1362,8 +1374,10 @@ int  get_access( char *pAccess, int *pValue)
   };
 
   int result = -1;
-  CSV_BUF items = {};
+  CSV_BUF items;
   uint32_t col_cnt = MaxCsvColumns;
+
+  memset( items, 0, sizeof(items));
   split( pAccess, ',', (char**)items, LineSize, &col_cnt );
 
 
@@ -1473,11 +1487,11 @@ static int parse_string( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 /*** strton *****************************************************************/
 /**
  *   Read string and format as number, ie. double.
- * 
+ *
  *   Accepts hex, decimal an floating point strings.
- * 
+ *
  *   The syntax is adopted from the strtol and strtod functions.
- * 
+ *
  *   @param p      string
  *   @param endp   see strtod and strtol
  */
@@ -1490,7 +1504,7 @@ static F64 strton( char const *p, char **endp ) {
   else {
     value = strtod( p, endp );
   }
-  
+
   return value;
 }
 
@@ -1520,7 +1534,7 @@ static int parse_number( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 /**
  *  @param item
  *  @param col_cnt
- *  @param cols 
+ *  @param cols
  */
 static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 {
@@ -1529,7 +1543,7 @@ static int parse_enum( DataItem *item, size_t col_cnt, CSV_BUF *cols )
 
   CSV_BUF Buf;
   PP_DATA_ENUM *d;
-  
+
   char *es = calloc( BufSize, 1 );
 
   enum {
@@ -1611,7 +1625,7 @@ int serialize_enum( char *Buf, size_t BufSize, PP_DATA_ENUM *enm ) {
 
   for( int i = 0; i < enm->cnt; i++ ) {
     int n;
-    
+
     // Include the default value into the descriptor.
     // This leads to different descriptors for
     // enums that are mostly identical and where some
@@ -1703,7 +1717,7 @@ void handle_pragma( char const *line, LOC const *loc ) {
 
   int n = find_opt( line + 8, (char const **)&Pragmas, &endp, &idx );
   if( !n ) {
-    const int buf_size = PATH_MAX * 1.5;
+    size_t buf_size = (size_t) (PATH_MAX * 1.5);
     char *buf = (char*)calloc( buf_size, sizeof(char));
     loc_fmt( buf, buf_size, loc );
     log_printf( LogErr, 0, "%s Unknown pragma: %s.", buf, endp );

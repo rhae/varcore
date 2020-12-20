@@ -240,7 +240,7 @@ static void wr_f32_clip(void)
   }
 }
 
-static void set_min_max() {
+static void set_min_max( void ) {
   F32 Min;
   F32 Max;
   F32 Mn;
@@ -283,7 +283,7 @@ static void set_min_max() {
   CU_ASSERT_DOUBLE_EQUAL( Max, Mx, 0.1 );
 }
 
-static void get_format() {
+static void get_format( void ) {
   U16 format = 0;
   ErrCode ret;
 
@@ -292,7 +292,7 @@ static void get_format() {
   CU_ASSERT_EQUAL( format, FMT_PREC_1 );
 }
 
-void get_storage_f32() {
+void get_storage_f32( void ) {
   ErrCode ret;
   U16 storage;
 

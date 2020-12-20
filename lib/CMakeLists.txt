@@ -7,6 +7,8 @@ file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${varcore_SOURCE_DIR}/*.h")
 # Make an automatic library - will be static or dynamic based on user setting
 add_library(varcore varcore.c ${HEADER_LIST})
 
+add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
 # We need this directory, and users of our library will need it too
 target_include_directories(varcore PUBLIC .)
 

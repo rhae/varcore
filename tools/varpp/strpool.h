@@ -37,7 +37,7 @@
 
 typedef struct _StringItem {
   char buf[1024];                /* key for hash */
-  int len;
+  size_t len;
   int constant;
   int offset;
   void *priv;
@@ -63,7 +63,7 @@ void         strpool_Init( StringPool *, int );
 StringItem  *strpool_Add( StringPool *, char const *, void * );
 StringItem  *strpool_Get( StringPool *, char const * );
 
-int          strpool_MaxLen( StringPool * );
+size_t       strpool_MaxLen( StringPool * );
 
 void         strpool_iter( spool_iter *, StringPool * );
 int          strpool_next( spool_iter *, StringItem * );

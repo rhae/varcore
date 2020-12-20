@@ -7,13 +7,22 @@ FILE(GLOB repl_SOURCES *.c)
 list(APPEND repl_SOURCES vardefs.h)
 
 add_executable(repl ${repl_SOURCES} )
+if(WIN32)
+    add_definitions(-Drestrict)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    add_definitions(-D_CRT_DEPRECATED_NO_WARNINGS)
+    add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+    add_definitions(-D_REENTRANT -D_POSIX_THREAD_SAFE_FUNCTIONS)
+    add_definitions(-DWIN32_LEAN_AND_MEAN)
+endif()
+
 add_dependencies(repl varpp)
 
 target_link_libraries(repl varcore)
 
 
 add_custom_command(
-  OUTPUT vardefs.h
+  OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/vardefs.h"
   COMMAND varpp "${CMAKE_CURRENT_SOURCE_DIR}/res.csv"
 
   # If the file exists, then commands related to that file won't be executed

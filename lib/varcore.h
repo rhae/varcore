@@ -175,6 +175,7 @@ typedef struct _DESCR_ENUM {
 	S16 def_value;
 	U16 cnt;
 	/* cppcheck-suppress misra-c2012-18.7 */
+#pragma warning( disable: 4200 )  /* Nicht dem Standard entsprechende Erweiterung: Null-Array in Struktur/Union */
 	ENUM_MBR mbr[];
 } DESCR_ENUM;
 

@@ -10,25 +10,36 @@
 #include <string.h>
 #include <errno.h>
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
+#ifdef _WIN32
+# include <winsock2.h>
+# include <ws2tcpip.h>
+
+# pragma comment(lib, "Ws2_32.lib")
+#else
+# include <unistd.h>
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <netdb.h>
+# include <arpa/inet.h>
+
+#define SOCKET int
+#endif
 
 #define GET_DATA( p ) struct TELNET_DATA *d = (struct TELNET_DATA *)p;
 
 
 struct TELNET_DATA {
+  int init_done;
+
   struct {
-    int sockfd;
+    SOCKET sockfd;
     int port;
     int backlog;
   } server;
 
   struct {
-    int sockfd;
+    SOCKET sockfd;
     struct sockaddr addr;
     socklen_t addr_len;
   } client;
@@ -74,48 +85,64 @@ static int find_opt( char const *p, char const **opt_list, char **endp, int *idx
   return found;
 }
 
-int setup( int port, int backlog ) {
+int pre_setup() {
+#if _WIN32
+  WSADATA wsaData;
+  int iResult;
+
+  // Initialize Winsock
+  iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+  if (iResult != 0) {
+      printf("WSAStartup failed: %d\n", iResult);
+      return 1;
+  }
+#endif
+
+  return 0;
+}
+
+SOCKET setup( int port, int backlog ) {
   struct sockaddr_in server;
   int yes=1;
   int ret;
 
-  int sockfd = socket(AF_INET , SOCK_STREAM , 0);
-	if (sockfd == -1)
-	{
-		printf("Could not create socket");
+  SOCKET sockfd = socket(AF_INET , SOCK_STREAM , 0);
+  if (sockfd == -1)
+  {
+    printf("Could not create socket");
     return -1;
-	}
-	puts("Socket created");
-	
-	//Prepare the sockaddr_in structure
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons( port );
+  }
+  puts("Socket created");
+  
+  //Prepare the sockaddr_in structure
+  server.sin_family = AF_INET;
+  server.sin_addr.s_addr = INADDR_ANY;
+  server.sin_port = htons( port );
 
   // lose the pesky "Address already in use" error message
-  ret = setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof yes);
+  ret = setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR, (char const *)&yes,sizeof(yes));
   if( ret < 0 ) {
-      perror("setsockopt SO_REUSEADDR failed.");
-      return -2;
+    perror("setsockopt SO_REUSEADDR failed.");
+    return -2;
   } 
 	
 	//Bind
   ret = bind(sockfd ,(struct sockaddr *)&server , sizeof(server));
   if( ret < 0 )
-	{
-		//print the error message
-		perror("bind failed.");
-		return -3;
-	}
+  {
+    //print the error message
+    perror("bind failed.");
+    return -3;
+  }
 	
-	//Listen
-	ret = listen( sockfd , backlog );
+  //Listen
+  ret = listen( sockfd , backlog );
   if( ret < 0 )
-	{
-		//print the error message
-		perror("listen failed.");
-		return -4;
-	}
+  {
+    //print the error message
+    perror("listen failed.");
+    return -4;
+  }
   
   return sockfd;
 }
@@ -161,6 +188,12 @@ int telnet_open( char const *args, void *priv ) {
     }
   }
 
+  if( !d->init_done ) {
+    int ret = pre_setup();
+    if( 0 == ret ) {
+      d->init_done = 1;
+    }
+  }
   d->server.sockfd = setup( d->server.port, d->server.backlog );
 
   if( d->client.sockfd == -1 ) {
@@ -172,7 +205,9 @@ int telnet_open( char const *args, void *priv ) {
     printf("connect from: ip=%s\n", buf );
   }
 
-  return d->server.sockfd;
+  // TODO: typecast is difficult on WINDOWS
+  // SOCKET = UINT_PTR!
+  return (int)d->server.sockfd;
 }
 
 int telnet_read( char *buf, int bufsz, void *priv ) {
@@ -186,7 +221,7 @@ int telnet_read( char *buf, int bufsz, void *priv ) {
     }
     p++;
     *p = '\0';
-    ret = p - buf;
+    ret = (int) (p - buf);
   }
   return ret;
 }
@@ -217,5 +252,6 @@ struct TEXT_IO telnet = {
 
 void telnet_init() {
 
+  data.init_done = 0;
   textio_register( &telnet );
 }
