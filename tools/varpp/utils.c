@@ -35,6 +35,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <stddef.h>
 
 /***************************************************************************/
 /**
