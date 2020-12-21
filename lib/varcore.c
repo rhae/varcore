@@ -278,6 +278,9 @@ ErrCode vc_reset() {
 				E = init_string( var );
 				break;
 
+			case TYPE_ACTION:
+				break;
+
 			default:
 				LOG_UNH_CASE( type );
 				break;
