@@ -271,7 +271,7 @@ static void as_str32(void)
   CU_ASSERT_STRING_EQUAL( S, "0xffffffff" );
 }
 
-static void set_min_max() {
+static void set_min_max( void ) {
   S16 Min;
   S16 Max;
   S16 Mn;

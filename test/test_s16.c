@@ -336,7 +336,7 @@ static void wr16_clip(void)
   }
 }
 
-static void set_min_max() {
+static void set_min_max( void ) {
   S16 Min;
   S16 Max;
   S16 Mn;

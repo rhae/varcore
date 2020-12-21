@@ -120,7 +120,7 @@ static void wr_str(void) {
   CU_ASSERT_STRING_EQUAL( S, "192.168.178.22" );
 }
 
-static void set_min_max() {
+static void set_min_max( void ) {
   U16 T = 0;
   ErrCode ret;
   HND hnd = VAR_IDN;
